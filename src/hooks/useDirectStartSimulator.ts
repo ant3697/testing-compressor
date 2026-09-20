@@ -54,7 +54,10 @@ export function useDirectStartSimulator(
   const audioCtxRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const subOscillatorRef = useRef<OscillatorNode | null>(null);
+  const lfoRef = useRef<OscillatorNode | null>(null);
+  const lfoGainRef = useRef<GainNode | null>(null);
   const filterNodeRef = useRef<BiquadFilterNode | null>(null);
+  const filterNode2Ref = useRef<BiquadFilterNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
 
   const playSound = useCallback((type: 'lra' | 'running' | 'click' | 'stop' | 'alarm') => {
@@ -86,7 +89,7 @@ export function useDirectStartSimulator(
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(260, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.06);
-        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.setValueAtTime(0.20, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.06);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -112,66 +115,91 @@ export function useDirectStartSimulator(
         return;
       }
 
-      // Initialize pleasant, acoustically-damped compressor engine sound chain
+      // Initialize authentic, acoustically-attenuated hermetic compressor sound generator
       if (!oscillatorRef.current) {
-        // 1. Primary fundamental motor rotation oscillator (sine wave: velvety deep 48 Hz)
+        // 1. Primary fundamental motor rotation oscillator (pure sinusoidal: velvety deep ~47.5 Hz representing 2.850 RPM)
         const osc1 = ctx.createOscillator();
         osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(48, ctx.currentTime);
+        osc1.frequency.setValueAtTime(47.5, ctx.currentTime);
 
-        // 2. Secondary gentle mechanical pumping harmonic (triangle wave: 96 Hz)
+        // 2. Secondary gentle piston compression stroke harmonic (sinusoidal: 95.0 Hz)
         const osc2 = ctx.createOscillator();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(96, ctx.currentTime);
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(95.0, ctx.currentTime);
 
-        // Sub-gain to blend mechanical harmonic subtly
+        // Sub-gain to blend the piston stroke harmonic with extreme subtlety
         const subGain = ctx.createGain();
-        subGain.gain.setValueAtTime(0.18, ctx.currentTime);
+        subGain.gain.setValueAtTime(0.09, ctx.currentTime);
         osc2.connect(subGain);
 
-        // 3. Low-pass acoustic dampening filter (models the hermetic steel dome and oil bath)
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(140, ctx.currentTime);
-        filter.Q.setValueAtTime(1.0, ctx.currentTime);
+        // 3. Dual-stage acoustic low-pass dampening filter (models the drawn-steel hermetic dome and oil bath isolation)
+        // Stage 1: Steep cutoff absorbing electrical high-frequency buzzing
+        const filter1 = ctx.createBiquadFilter();
+        filter1.type = 'lowpass';
+        filter1.frequency.setValueAtTime(118, ctx.currentTime);
+        filter1.Q.setValueAtTime(0.707, ctx.currentTime);
 
-        osc1.connect(filter);
-        subGain.connect(filter);
+        // Stage 2: Second pole completely rolling off any synthetic edge
+        const filter2 = ctx.createBiquadFilter();
+        filter2.type = 'lowpass';
+        filter2.frequency.setValueAtTime(138, ctx.currentTime);
+        filter2.Q.setValueAtTime(0.707, ctx.currentTime);
 
-        // 4. Master compressor gain
+        osc1.connect(filter1);
+        subGain.connect(filter1);
+        filter1.connect(filter2);
+
+        // 4. Subtle sub-mechanical compression pulse (LFO tremolo at 23.75 Hz for organic breathing)
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(23.75, ctx.currentTime);
+        lfoGain.gain.setValueAtTime(0.0035, ctx.currentTime);
+        lfo.connect(lfoGain);
+
+        // 5. Master compressor gain node
         const masterGain = ctx.createGain();
         masterGain.gain.setValueAtTime(0, ctx.currentTime);
+        lfoGain.connect(masterGain.gain);
 
-        filter.connect(masterGain);
+        filter2.connect(masterGain);
         masterGain.connect(ctx.destination);
 
         osc1.start();
         osc2.start();
+        lfo.start();
 
         oscillatorRef.current = osc1;
         subOscillatorRef.current = osc2;
-        filterNodeRef.current = filter;
+        lfoRef.current = lfo;
+        lfoGainRef.current = lfoGain;
+        filterNodeRef.current = filter1;
+        filterNode2Ref.current = filter2;
         gainNodeRef.current = masterGain;
       }
 
       const osc1 = oscillatorRef.current;
       const osc2 = subOscillatorRef.current;
-      const filter = filterNodeRef.current;
+      const filter1 = filterNodeRef.current;
+      const filter2 = filterNode2Ref.current;
       const gain = gainNodeRef.current;
       if (!osc1 || !gain) return;
 
       if (type === 'lra') {
-        // Deeper loaded humming during rotor standstill or initial boost
-        osc1.frequency.setTargetAtTime(48, ctx.currentTime, 0.05);
-        if (osc2) osc2.frequency.setTargetAtTime(96, ctx.currentTime, 0.05);
-        if (filter) filter.frequency.setTargetAtTime(130, ctx.currentTime, 0.05);
-        gain.gain.setTargetAtTime(0.10, ctx.currentTime, 0.05);
+        // Deeper loaded magnetizing hum during rotor standstill or initial boost
+        osc1.frequency.setTargetAtTime(49.0, ctx.currentTime, 0.06);
+        if (osc2) osc2.frequency.setTargetAtTime(98.0, ctx.currentTime, 0.06);
+        if (filter1) filter1.frequency.setTargetAtTime(108, ctx.currentTime, 0.06);
+        if (filter2) filter2.frequency.setTargetAtTime(128, ctx.currentTime, 0.06);
+        gain.gain.setTargetAtTime(0.075, ctx.currentTime, 0.06);
       } else if (type === 'running') {
-        // Smooth, soothing, pleasant purr of a well-lubricated hermetic compressor in nominal regime
-        osc1.frequency.setTargetAtTime(50, ctx.currentTime, 0.12);
-        if (osc2) osc2.frequency.setTargetAtTime(100, ctx.currentTime, 0.12);
-        if (filter) filter.frequency.setTargetAtTime(155, ctx.currentTime, 0.12);
-        gain.gain.setTargetAtTime(0.055, ctx.currentTime, 0.12);
+        // Atenuado: Ronroneo suave, sordo y amortiguado de compresor hermético en régimen nominal (2.850 RPM)
+        osc1.frequency.setTargetAtTime(47.5, ctx.currentTime, 0.18);
+        if (osc2) osc2.frequency.setTargetAtTime(95.0, ctx.currentTime, 0.18);
+        if (filter1) filter1.frequency.setTargetAtTime(116, ctx.currentTime, 0.18);
+        if (filter2) filter2.frequency.setTargetAtTime(136, ctx.currentTime, 0.18);
+        // Nivel atenuado y confortable: 0.034 (amortiguado por carcasa y baño de aceite)
+        gain.gain.setTargetAtTime(0.034, ctx.currentTime, 0.20);
       }
     } catch {
       // Audio context may fail if user hasn't interacted yet
@@ -215,6 +243,19 @@ export function useDirectStartSimulator(
       }
     };
   }, [isAlarmActive, soundEnabled, playSound]);
+
+  // Clean up Web Audio Context when unmounting
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+        try {
+          audioCtxRef.current.close().catch(() => {});
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
 
   // Handle Motor RPM Smooth Transition
   useEffect(() => {
@@ -334,26 +375,47 @@ export function useDirectStartSimulator(
   };
 
   const handleStartBridge = () => {
-    if (!powerOn || klixonTripped || isBridging) return;
+    if (!powerOn || klixonTripped || isBridging || isMotorRunning) return;
     playSound('click');
     setIsBridging(true);
     setIsAlarmActive(false);
     setAlarmMessage('');
-    setFeedbackMessage('');
+    setFeedbackMessage('⚡ Suministrando impulso de arranque puenteando Marcha (R) y Arranque (S)...');
     const startTs = Date.now();
     bridgeHoldStartTsRef.current = startTs;
+
+    let autoStarted = false;
 
     if (bridgeTimerRef.current) clearInterval(bridgeTimerRef.current);
     bridgeTimerRef.current = setInterval(() => {
       const elapsed = Date.now() - startTs;
       setBridgeDurationMs(elapsed);
 
-      // A partir de 2.8 segundos: Alarma sonora y visual advirtiendo peligro de daño en el motor
-      if (elapsed >= 2800 && elapsed < 3500) {
+      // 1. ARRANQUE AUTOMÁTICO TRAS 0.3 SEGUNDOS DE IMPULSO
+      if (elapsed >= 300 && !autoStarted) {
+        if (isSeizedMotor) {
+          setFeedbackMessage('⚠️ Mecánica clavada: El rotor no puede girar debido a bloqueo mecánico. Consumo en LRA (~18.4 A).');
+        } else {
+          autoStarted = true;
+          setIsMotorRunning(true);
+          setMotorRpm(2850);
+          setFeedbackMessage('⚡ ¡Compresor arrancado automáticamente tras 0.3s! Suelta el pulsador para desconectar el devanado auxiliar (S).');
+        }
+      }
+
+      // 2. ADVERTENCIA PREVENTIVA (si sigue pulsado a partir de 2.2s con el motor ya en marcha)
+      if (elapsed >= 2200 && elapsed < 3000) {
         setIsAlarmActive(true);
-        setAlarmMessage('🚨 ¡PELIGRO! Pulsador retenido > 3s. Sobrecalentamiento crítico de la bobina auxiliar (S). ¡Suelta inmediatamente o se quemará!');
-      } else if (elapsed >= 3500) {
-        // Al superar los 3.5 segundos con el pulsador retenido: Disparo del protector térmico Klixon para evitar que el motor se queme
+        setAlarmMessage('⚠️ ¡ATENCIÓN! El compresor ya arrancó. ¡Suelta el pulsador para no sobrecalentar el devanado auxiliar (S)!');
+      }
+
+      // 3. ERROR TRAS MÁS DE 3 SEGUNDOS (> 3.000 ms) CON EL MOTOR FUNCIONANDO A LA VEZ
+      if (elapsed >= 3000 && elapsed < 3600) {
+        setIsAlarmActive(true);
+        setAlarmMessage('🚨 ¡ERROR CRÍTICO! Pulsador retenido > 3s con motor en marcha. Devanado auxiliar (S) sometido a sobrecalentamiento destructivo.');
+        setFeedbackMessage('❌ ¡ERROR POR EXCESO DE TIEMPO (> 3s)! El devanado de arranque (S) está funcionando a la vez que el compresor ya ha arrancado. El hilo fino de arranque se carbonizará si no se desconecta.');
+      } else if (elapsed >= 3600) {
+        // Al superar 3.6 segundos con el pulsador retenido: Disparo del protector térmico Klixon
         if (bridgeTimerRef.current) {
           clearInterval(bridgeTimerRef.current);
           bridgeTimerRef.current = null;
@@ -362,8 +424,9 @@ export function useDirectStartSimulator(
         setIsMotorRunning(false);
         setIsAlarmActive(false);
         setKlixonTripped(true);
-        setAlarmMessage('🔥 ¡DISPARO TÉRMICO KLIXON! Bobina auxiliar (S) sobrecalentada por pulsador retenido > 3s.');
-        setFeedbackMessage(`🔥 ¡PELIGRO DE DAÑO EN EL MOTOR! Mantuviste pulsado el botón ${(elapsed / 1000).toFixed(1)}s (> 3 s). La bobina auxiliar de arranque (S) está construida con hilo muy delgado y no tolera servicio continuo. El protector térmico Klixon ha saltado para evitar que el motor se queme. Haz clic en "REARMAR KLIXON" para volver a intentar.`);
+        setMotorRpm(0);
+        setAlarmMessage('🔥 ¡DISPARO TÉRMICO KLIXON! Bobina auxiliar (S) sobrecalentada por pulsador retenido > 3s con motor en marcha.');
+        setFeedbackMessage(`🔥 ¡ERROR CRÍTICO: DISPARO DEL KLIXON! Mantuviste pulsado ${(elapsed / 1000).toFixed(1)}s (> 3 s) con el motor arrancado. La bobina auxiliar de arranque (S) no tolera servicio continuo; el protector Klixon ha saltado para evitar quemar el motor. Pulsa "REARMAR KLIXON" para volver a intentar.`);
         playSound('click');
         playSound('stop');
       }
@@ -391,28 +454,30 @@ export function useDirectStartSimulator(
       if (isSeizedMotor) {
         setIsMotorRunning(false);
         setFeedbackMessage('⚠️ Mecánica clavada: El rotor no puede girar debido a bloqueo mecánico.');
+      } else if (elapsed < 300) {
+        setIsMotorRunning(false);
+        setMotorRpm(0);
+        setFeedbackMessage(`⚠️ Impulso muy breve (${(elapsed / 1000).toFixed(2)}s): El compresor no arrancó. Mantén presionado al menos 0.3 segundos para que arranque automáticamente.`);
+      } else if (elapsed <= 3000) {
+        setIsMotorRunning(true);
+        setFeedbackMessage(`✅ ¡Arranque exitoso! Impulso de ${(elapsed / 1000).toFixed(1)}s. El compresor ha arrancado y continúa en marcha normal permanente (~2.850 RPM). El pulsador queda inactivo.`);
       } else {
-        // El tiempo seguro de impulso para vencer la inercia sin dañar el bobinado es de 1.2s a 3.0s
-        if (elapsed < 1200) {
-          setIsMotorRunning(false);
-          setFeedbackMessage(`⚠️ Impulso insuficiente (${(elapsed / 1000).toFixed(1)}s): El rotor no alcanzó suficiente inercia. Mantén pulsado el botón entre 1.5 y 2.5 segundos para arrancar.`);
-        } else if (elapsed <= 3000) {
-          setIsMotorRunning(true);
-          setFeedbackMessage(`✅ ¡Arranque exitoso! Impulso de ${(elapsed / 1000).toFixed(1)}s. El compresor ha alcanzado régimen normal (~2.850 RPM) y funciona de forma estable.`);
-        } else {
-          setIsMotorRunning(true);
-          setFeedbackMessage(`⚠️ ¡ALERTA DE DAÑO EN EL MOTOR! Mantuviste pulsado ${(elapsed / 1000).toFixed(1)}s (> 3 s). La bobina de arranque (S) ha sufrido un sobrecalentamiento severo. Si el pulsador se mantiene más de 3 segundos de forma continuada, el esmalte se carboniza y el motor queda inutilizado o salta el Klixon.`);
-        }
+        setIsMotorRunning(true);
+        setFeedbackMessage(`⚠️ ¡ALERTA DE DAÑO EN EL MOTOR! Mantuviste pulsado ${(elapsed / 1000).toFixed(1)}s (> 3 s) funcionando a la vez con el compresor ya en marcha. La bobina auxiliar sufrió un sobrecalentamiento severo.`);
       }
     }
     setBridgeDurationMs(0);
   };
 
-  // Clic directo: si el usuario hace clic rápido sin mantener, se le recuerda que debe mantener pulsado
+  // Clic directo en el pulsador
   const handleClickBridge = () => {
     if (!powerOn || klixonTripped) return;
-    if (!isBridging && !isMotorRunning) {
-      setFeedbackMessage('👇 Haz clic y MANTÉN PULSADO el botón durante 1.5 a 2.5 segundos para que el rotor arranque.');
+    if (isMotorRunning) {
+      setFeedbackMessage('ℹ️ El compresor ya está en marcha. El pulsador de arranque ha quedado inactivo (no detiene el motor). Para apagarlo, pulsa «230V OFF / DESCONECTAR».');
+      return;
+    }
+    if (!isBridging) {
+      setFeedbackMessage('👇 Mantén pulsado el botón al menos 0.3 segundos para que el motor arranque de forma automática.');
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ZoomPanViewer } from './ZoomPanViewer';
 import { AlertTriangle, CheckCircle2, Zap, HelpCircle, ShieldAlert } from 'lucide-react';
+import { KlixonModal } from './KlixonModal';
 
 export type WindingFaultType =
   | 'healthy'
@@ -80,6 +81,7 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
   rTotal = '22.8',
 }) => {
   const [internalFault, setInternalFault] = useState<WindingFaultType>(selectedFault);
+  const [isKlixonModalOpen, setIsKlixonModalOpen] = useState<boolean>(false);
   const activeFault = onSelectFault ? selectedFault : internalFault;
   const setFault = onSelectFault || setInternalFault;
 
@@ -206,7 +208,15 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
             </g>
 
             {/* Klixon Box */}
-            <g transform="translate(240, 125)">
+            <g
+              transform="translate(240, 125)"
+              onClick={() => setIsKlixonModalOpen(true)}
+              className="cursor-pointer group"
+              style={{ cursor: 'pointer' }}
+              role="button"
+              tabIndex={0}
+            >
+              <title>Protector Térmico Klixon: Clic para ver fotografía y despiece en ventana modal</title>
               <rect
                 x="0"
                 y="0"
@@ -214,8 +224,9 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
                 height="30"
                 rx="6"
                 fill={activeFault === 'open_klixon' ? '#450a0a' : '#1e293b'}
-                stroke={activeFault === 'open_klixon' ? '#ef4444' : '#64748b'}
+                stroke={activeFault === 'open_klixon' ? '#ef4444' : '#fbbf24'}
                 strokeWidth="1.8"
+                className="transition-all hover:stroke-amber-300 hover:fill-amber-950/40"
               />
               <text x="30" y="16" fill="#ffffff" fontSize="9" fontWeight="bold" textAnchor="middle">
                 KLIXON
@@ -363,6 +374,12 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
           </span>
         </div>
       </div>
+
+      {/* Ventana modal con fotografía real del Klixon */}
+      <KlixonModal
+        isOpen={isKlixonModalOpen}
+        onClose={() => setIsKlixonModalOpen(false)}
+      />
     </div>
   );
 };

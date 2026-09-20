@@ -81,7 +81,7 @@ export const DirectStartControlsPanel: React.FC<DirectStartControlsPanelProps> =
               <strong>Pinza amperimétrica:</strong> Abraza el cable de Fase ($L$) para medir corriente en tiempo real.
             </li>
             <li>
-              <strong>Impulso de arranque:</strong> Con tensión aplicada, haz un puente momentáneo de <strong>1 a 2 segundos</strong> entre <strong>Marcha ($R$)</strong> y <strong>Arranque ($S$)</strong>.
+              <strong>Impulso de arranque:</strong> Con tensión aplicada, haz un puente momentáneo (con <strong>0.3 segundos</strong> es suficiente) entre <strong>Marcha ($R$)</strong> y <strong>Arranque ($S$)</strong> con el pulsador.
             </li>
             <li>
               <strong>Diagnóstico:</strong> Si arranca y los amperios caen a nominal (~0.8-1.2 A), el compresor está perfecto; la avería estaba en el relé o PTC. Si no arranca y el Klixon corta a &gt;14 A, está clavado.
@@ -199,33 +199,38 @@ export const DirectStartControlsPanel: React.FC<DirectStartControlsPanelProps> =
                   : 'text-blue-500'
               }`}>
                 {isBridging
-                  ? `${(bridgeDurationMs / 1000).toFixed(1)}s (Mantén hasta 2s)`
+                  ? `${(bridgeDurationMs / 1000).toFixed(1)}s ${isMotorRunning ? '• ¡Ya arrancó!' : '(mín. 0.3s)'}`
                   : isMotorRunning
-                  ? 'Marcha normal • 2.850 RPM'
-                  : 'Mantén pulsado 1.5 - 2.5s'}
+                  ? 'Compresor en marcha • Pulsador inactivo'
+                  : 'Mantén pulsado 0.3s'}
               </span>
             </div>
           </div>
 
           <button
             type="button"
-            disabled={!powerOn || klixonTripped}
+            disabled={!powerOn || klixonTripped || (isMotorRunning && !isBridging)}
             onClick={handleClickBridge}
             onMouseDown={handleStartBridge}
             onMouseUp={handleEndBridge}
             onMouseLeave={handleEndBridge}
             onTouchStart={handleStartBridge}
             onTouchEnd={handleEndBridge}
-            className={`w-full py-3 px-3 rounded-xl font-mono text-tiny font-extrabold transition-all select-none shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+            title={
+              isMotorRunning
+                ? 'El compresor ya está en marcha continua. El pulsador queda inactivo. Para detenerlo, desconecta la red eléctrica (230V OFF).'
+                : undefined
+            }
+            className={`w-full py-3 px-3 rounded-xl font-mono text-tiny font-extrabold transition-all select-none shadow-md flex items-center justify-center gap-2 ${
               !powerOn || klixonTripped
                 ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-300 dark:border-slate-700 cursor-not-allowed'
                 : isAlarmActive
-                ? 'bg-rose-600 text-white animate-bounce shadow-inner ring-4 ring-rose-500'
+                ? 'bg-rose-600 text-white animate-bounce shadow-inner ring-4 ring-rose-500 cursor-pointer'
                 : isBridging
-                ? 'bg-amber-500 text-black scale-[0.98] shadow-inner ring-4 ring-amber-400'
+                ? 'bg-blue-600 text-white scale-[0.98] shadow-inner ring-4 ring-blue-400 cursor-pointer'
                 : isMotorRunning
-                ? 'bg-emerald-600 text-white hover:bg-emerald-500 border border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-                : 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 ring-4 ring-blue-400/80 shadow-[0_0_20px_#3b82f6] animate-pulse hover:scale-[1.02]'
+                ? 'bg-emerald-600/85 text-white border border-emerald-400/80 shadow-[0_0_12px_rgba(16,185,129,0.3)] cursor-not-allowed opacity-90'
+                : 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 ring-4 ring-blue-400/80 shadow-[0_0_20px_#3b82f6] animate-pulse hover:scale-[1.02] cursor-pointer'
             }`}
           >
             <Zap className={`w-4 h-4 ${isBridging || isAlarmActive ? 'fill-current animate-bounce' : ''}`} />
@@ -233,10 +238,12 @@ export const DirectStartControlsPanel: React.FC<DirectStartControlsPanelProps> =
               {isAlarmActive
                 ? '🚨 ¡ALARMA! SUELTA EL PULSADOR INMEDIATAMENTE'
                 : isBridging
-                ? `¡PUENTE R ⟷ S ACTIVO (${(bridgeDurationMs / 1000).toFixed(1)}s)! INICIANDO ROTOR...`
+                ? isMotorRunning
+                  ? `⚡ ¡MOTOR ARRANCADO! SUELTA EL PULSADOR (${(bridgeDurationMs / 1000).toFixed(1)}s)`
+                  : `¡PUENTE R ⟷ S ACTIVO (${(bridgeDurationMs / 1000).toFixed(1)}s)! INICIANDO ROTOR...`
                 : isMotorRunning
                 ? 'COMPRESOR EN MARCHA • RÉGIMEN NORMAL (2.850 RPM)'
-                : '⚡ MANTÉN PULSADO 2s PARA ARRANCAR'}
+                : '⚡ MANTÉN PULSADO 0.3s PARA ARRANCAR'}
             </span>
           </button>
 
@@ -254,13 +261,19 @@ export const DirectStartControlsPanel: React.FC<DirectStartControlsPanelProps> =
           )}
 
           {isMotorRunning && powerOn && !klixonTripped && (
-            <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-emerald-300">RÉGIMEN NORMAL: ROTOR A 2.850 RPM</span>
+            <>
+              <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-emerald-300">RÉGIMEN NORMAL: ROTOR A 2.850 RPM</span>
+                </div>
+                <span className="font-mono text-emerald-300 font-black">{currentAmps.toFixed(2)} A (FLA)</span>
               </div>
-              <span className="font-mono text-emerald-300 font-black">{currentAmps.toFixed(2)} A (FLA)</span>
-            </div>
+              <div className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-[11px] flex items-center justify-between">
+                <span className="font-semibold text-amber-600 dark:text-amber-400">Pulsador inactivo tras arranque</span>
+                <span className="text-slate-500 dark:text-slate-400 text-[10.5px]">Para parar: pulsa <strong>DESCONECTAR 230V</strong></span>
+              </div>
+            </>
           )}
 
           {isAlarmActive && (
@@ -321,7 +334,7 @@ export const DirectStartControlsPanel: React.FC<DirectStartControlsPanelProps> =
             </div>
           ) : (
             <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-tiny leading-relaxed">
-              Pulsa <strong>«ENERGIZAR (230V)»</strong> para suministrar corriente y luego mantén presionado el botón <strong className="text-amber-500">R ⟷ S</strong> 1-2 segundos.
+              Pulsa <strong>«ENERGIZAR (230V)»</strong> para suministrar corriente y luego mantén presionado el botón <strong className="text-blue-500">R ⟷ S</strong> al menos 0.3 segundos.
             </div>
           )}
         </div>

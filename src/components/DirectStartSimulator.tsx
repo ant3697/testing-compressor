@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import directStartImg from '../assets/arranque directo.png';
 import { RealisticPushbutton } from './RealisticPushbutton';
 import { ZoomPanViewer } from './ZoomPanViewer';
+import { KlixonModal } from './KlixonModal';
 import {
   Zap,
   Play,
@@ -19,7 +20,8 @@ import {
   Layers,
   ArrowRight,
   Eye,
-  Power
+  Power,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface DirectStartSimulatorProps {
@@ -40,6 +42,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
   const [isMotorRunning, setIsMotorRunning] = useState<boolean>(false);
   const [isSeizedMotor, setIsSeizedMotor] = useState<boolean>(false); // Mechanically locked rotor
   const [klixonTripped, setKlixonTripped] = useState<boolean>(false);
+  const [isKlixonModalOpen, setIsKlixonModalOpen] = useState<boolean>(false);
   const [bridgeDurationMs, setBridgeDurationMs] = useState<number>(0);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
   const [showGuide, setShowGuide] = useState<boolean>(false);
@@ -51,9 +54,14 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
   const bridgeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const subOscillatorRef = useRef<OscillatorNode | null>(null);
+  const lfoRef = useRef<OscillatorNode | null>(null);
+  const lfoGainRef = useRef<GainNode | null>(null);
+  const filterNodeRef = useRef<BiquadFilterNode | null>(null);
+  const filterNode2Ref = useRef<BiquadFilterNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
 
-  // Web Audio Synthesizer for realistic workshop hum
+  // Web Audio Synthesizer for realistic workshop hum & attenuated compressor operation
   const playSound = (type: 'lra' | 'running' | 'click' | 'stop') => {
     if (!soundEnabled) return;
     try {
@@ -72,7 +80,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
 
       if (type === 'stop') {
         if (gainNodeRef.current && ctx) {
-          gainNodeRef.current.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+          gainNodeRef.current.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
         }
         return;
       }
@@ -81,42 +89,99 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(320, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.4, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+        osc.frequency.setValueAtTime(280, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(75, ctx.currentTime + 0.06);
+        gain.gain.setValueAtTime(0.20, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.06);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
-        osc.stop(ctx.currentTime + 0.09);
+        osc.stop(ctx.currentTime + 0.07);
         return;
       }
 
-      // Continuous hum
+      // Initialize authentic, acoustically-attenuated hermetic compressor sound generator
       if (!oscillatorRef.current) {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        oscillatorRef.current = osc;
-        gainNodeRef.current = gain;
+        // 1. Primary fundamental motor rotation oscillator (sinusoidal: deep 47.5 Hz representing 2.850 RPM)
+        const osc1 = ctx.createOscillator();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(47.5, ctx.currentTime);
+
+        // 2. Secondary gentle piston compression stroke harmonic (sinusoidal: 95.0 Hz)
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(95.0, ctx.currentTime);
+
+        const subGain = ctx.createGain();
+        subGain.gain.setValueAtTime(0.09, ctx.currentTime);
+        osc2.connect(subGain);
+
+        // 3. Dual-stage acoustic low-pass dampening filter (drawn-steel dome and oil bath isolation)
+        const filter1 = ctx.createBiquadFilter();
+        filter1.type = 'lowpass';
+        filter1.frequency.setValueAtTime(118, ctx.currentTime);
+        filter1.Q.setValueAtTime(0.707, ctx.currentTime);
+
+        const filter2 = ctx.createBiquadFilter();
+        filter2.type = 'lowpass';
+        filter2.frequency.setValueAtTime(138, ctx.currentTime);
+        filter2.Q.setValueAtTime(0.707, ctx.currentTime);
+
+        osc1.connect(filter1);
+        subGain.connect(filter1);
+        filter1.connect(filter2);
+
+        // 4. Subtle mechanical compression pulse LFO (23.75 Hz)
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(23.75, ctx.currentTime);
+        lfoGain.gain.setValueAtTime(0.0035, ctx.currentTime);
+        lfo.connect(lfoGain);
+
+        // 5. Master compressor gain node
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0, ctx.currentTime);
+        lfoGain.connect(masterGain.gain);
+
+        filter2.connect(masterGain);
+        masterGain.connect(ctx.destination);
+
+        osc1.start();
+        osc2.start();
+        lfo.start();
+
+        oscillatorRef.current = osc1;
+        subOscillatorRef.current = osc2;
+        lfoRef.current = lfo;
+        lfoGainRef.current = lfoGain;
+        filterNodeRef.current = filter1;
+        filterNode2Ref.current = filter2;
+        gainNodeRef.current = masterGain;
       }
 
-      const osc = oscillatorRef.current;
+      const osc1 = oscillatorRef.current;
+      const osc2 = subOscillatorRef.current;
+      const filter1 = filterNodeRef.current;
+      const filter2 = filterNode2Ref.current;
       const gain = gainNodeRef.current;
-      if (!osc || !gain) return;
+      if (!osc1 || !gain) return;
 
       if (type === 'lra') {
-        // Heavy 50Hz / 100Hz stalled hum
-        osc.frequency.setTargetAtTime(50, ctx.currentTime, 0.05);
-        gain.gain.setTargetAtTime(0.25, ctx.currentTime, 0.05);
+        // Deeper loaded magnetizing hum during rotor standstill or initial boost
+        osc1.frequency.setTargetAtTime(49.0, ctx.currentTime, 0.06);
+        if (osc2) osc2.frequency.setTargetAtTime(98.0, ctx.currentTime, 0.06);
+        if (filter1) filter1.frequency.setTargetAtTime(108, ctx.currentTime, 0.06);
+        if (filter2) filter2.frequency.setTargetAtTime(128, ctx.currentTime, 0.06);
+        gain.gain.setTargetAtTime(0.075, ctx.currentTime, 0.06);
       } else if (type === 'running') {
-        // Smooth 50Hz running hum with lighter volume
-        osc.frequency.setTargetAtTime(55, ctx.currentTime, 0.1);
-        gain.gain.setTargetAtTime(0.09, ctx.currentTime, 0.1);
+        // Atenuado: Ronroneo suave, sordo y amortiguado de compresor hermético en régimen nominal (2.850 RPM)
+        osc1.frequency.setTargetAtTime(47.5, ctx.currentTime, 0.18);
+        if (osc2) osc2.frequency.setTargetAtTime(95.0, ctx.currentTime, 0.18);
+        if (filter1) filter1.frequency.setTargetAtTime(116, ctx.currentTime, 0.18);
+        if (filter2) filter2.frequency.setTargetAtTime(136, ctx.currentTime, 0.18);
+        // Nivel atenuado y confortable: 0.034 (amortiguado por carcasa y baño de aceite)
+        gain.gain.setTargetAtTime(0.034, ctx.currentTime, 0.20);
       }
     } catch {
       // Audio context might be restricted before user interaction
@@ -181,20 +246,36 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
     };
   }, [powerOn, klixonTripped, isMotorRunning, isSeizedMotor]);
 
-  // Track bridge button holding time
+  // Track bridge button holding time and handle 0.3s auto-start and >3s error
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isBridging && powerOn && !klixonTripped) {
       interval = setInterval(() => {
-        setBridgeDurationMs((prev) => prev + 100);
-      }, 100);
+        setBridgeDurationMs((prev) => {
+          const next = prev + 50;
+          // Auto-start after 0.3s
+          if (next >= 300 && !isMotorRunning && !isSeizedMotor) {
+            setIsMotorRunning(true);
+            playSound('running');
+          }
+          // Error and Klixon trip if held > 3.5s
+          if (next >= 3500) {
+            setKlixonTripped(true);
+            setIsMotorRunning(false);
+            setIsBridging(false);
+            playSound('click');
+            playSound('stop');
+          }
+          return next;
+        });
+      }, 50);
     } else {
       setBridgeDurationMs(0);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isBridging, powerOn, klixonTripped]);
+  }, [isBridging, powerOn, klixonTripped, isMotorRunning, isSeizedMotor]);
 
   // Handle Power Switch (230V Mains)
   const handleTogglePower = () => {
@@ -214,7 +295,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
 
   // Pushbutton / Screwdriver Bridge Actions
   const handleStartBridge = () => {
-    if (!powerOn || klixonTripped) return;
+    if (!powerOn || klixonTripped || isMotorRunning) return;
     playSound('click');
     setIsBridging(true);
   };
@@ -227,34 +308,26 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
       if (isSeizedMotor) {
         // Seized compressor cannot start
         setIsMotorRunning(false);
-      } else {
-        // Momentary bridge impulse successfully gives the initial torque to start the motor
+      } else if (bridgeDurationMs >= 300) {
         setIsMotorRunning(true);
+      } else {
+        setIsMotorRunning(false);
       }
     }
   };
 
-  // Quick pulse click handler for the direct start bridge switch (single tap or click without holding)
+  // Quick pulse click handler for the direct start bridge switch
   const handleClickBridge = () => {
-    if (!powerOn) {
-      playSound('click');
-      return;
-    }
-    if (klixonTripped) return;
-
+    if (!powerOn || klixonTripped || isMotorRunning) return;
     playSound('click');
     setIsBridging(true);
 
     setTimeout(() => {
       setIsBridging(false);
-      if (powerOn && !klixonTripped) {
-        if (isSeizedMotor) {
-          setIsMotorRunning(false);
-        } else {
-          setIsMotorRunning(true);
-        }
+      if (powerOn && !klixonTripped && !isSeizedMotor) {
+        setIsMotorRunning(true);
       }
-    }, 450);
+    }, 350);
   };
 
   // Reset simulation
@@ -352,7 +425,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
               <strong>Pinza amperimétrica:</strong> Abraza la Fase ($L$) para medir el consumo en tiempo real.
             </li>
             <li>
-              <strong>Impulso de arranque:</strong> Con tensión aplicada, haz un puente momentáneo de <strong>1 a 2 segundos</strong> entre <strong>Marcha ($R$)</strong> y <strong>Arranque ($S$)</strong> con un pulsador o destornillador aislado.
+              <strong>Impulso de arranque:</strong> Con tensión aplicada, haz un puente momentáneo (con <strong>0.3 segundos</strong> es suficiente) entre <strong>Marcha ($R$)</strong> y <strong>Arranque ($S$)</strong> con un pulsador o destornillador aislado.
             </li>
             <li>
               <strong>Criterio de diagnóstico:</strong> Si el compresor arranca y los amperios caen a nominal (~2.4 A), el compresor está perfecto mecánicamente; la avería estaba en el relé o PTC. Si no arranca y el Klixon corta a 18 A, el compresor está clavado (gripado).
@@ -717,6 +790,36 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* 4b. ETIQUETA KLIXON INTERACTIVA (SOBRE LA IMAGEN DEL BANCO) */}
+                <div
+                  id="klixon-simulator-photo-hotspot"
+                  className="absolute pointer-events-auto cursor-pointer select-none group z-20"
+                  style={{
+                    left: '40.04%',
+                    top: '46.75%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '8.98%',
+                    height: '10.32%',
+                  }}
+                  onClick={() => setIsKlixonModalOpen(true)}
+                  title="Protector Térmico Klixon: Clic para ver fotografía y despiece en ventana modal"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      setIsKlixonModalOpen(true);
+                    }
+                  }}
+                >
+                  <div className="w-full h-full rounded-[14px] border-2 border-amber-400/40 group-hover:border-amber-400 group-hover:bg-amber-400/20 group-hover:shadow-[0_0_18px_rgba(251,191,36,0.7)] transition-all flex flex-col items-center justify-center relative">
+                    <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-30 bg-slate-950/95 text-amber-300 border border-amber-400/80 rounded-md px-2 py-0.5 text-[9px] font-mono font-black whitespace-nowrap shadow-2xl flex items-center gap-1">
+                      <ShieldAlert className="w-3 h-3 text-amber-400" />
+                      <span>KLIXON • Clic para ver modal</span>
+                    </div>
+                  </div>
+                </div>
               </ZoomPanViewer>
             </div>
           )}
@@ -911,7 +1014,16 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
               {/* -------------------------------------------------- */}
               {/* 3. KLIXON THERMAL PROTECTOR                        */}
               {/* -------------------------------------------------- */}
-              <g id="klixon-protector" transform="translate(195, 110)">
+              <g
+                id="klixon-protector"
+                transform="translate(195, 110)"
+                onClick={() => setIsKlixonModalOpen(true)}
+                className="cursor-pointer group"
+                style={{ cursor: 'pointer' }}
+                role="button"
+                tabIndex={0}
+              >
+                <title>Protector Térmico Klixon: Clic para ver fotografía y despiece en ventana modal</title>
                 <rect
                   x="0"
                   y="0"
@@ -919,8 +1031,9 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
                   height="34"
                   rx="6"
                   fill={klixonTripped ? '#881337' : '#1e293b'}
-                  stroke={klixonTripped ? '#f43f5e' : '#475569'}
+                  stroke={klixonTripped ? '#f43f5e' : '#fbbf24'}
                   strokeWidth="1.5"
+                  className="transition-all hover:stroke-amber-300 hover:fill-amber-950/40"
                 />
                 <text x="22" y="14" fill="#cbd5e1" fontSize="7.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
                   KLIXON
@@ -1343,28 +1456,46 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
               {/* Direct interactive tactile bar */}
               <button
                 type="button"
-                disabled={!powerOn || klixonTripped}
+                disabled={!powerOn || klixonTripped || (isMotorRunning && !isBridging)}
                 onClick={handleClickBridge}
                 onMouseDown={handleStartBridge}
                 onMouseUp={handleEndBridge}
                 onMouseLeave={handleEndBridge}
                 onTouchStart={handleStartBridge}
                 onTouchEnd={handleEndBridge}
-                className={`w-full py-2.5 px-3 rounded-xl font-mono text-tiny font-extrabold transition-all select-none shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+                title={
+                  isMotorRunning
+                    ? 'Compresor en marcha normal. El pulsador queda inactivo. Para parar el motor, desconecta la red eléctrica (230V OFF).'
+                    : undefined
+                }
+                className={`w-full py-2.5 px-3 rounded-xl font-mono text-tiny font-extrabold transition-all select-none shadow-md flex items-center justify-center gap-2 ${
                   !powerOn || klixonTripped
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-300 dark:border-slate-700 cursor-not-allowed'
                     : isBridging
-                    ? 'bg-rose-600 text-white scale-[0.98] shadow-inner ring-4 ring-rose-500/40'
-                    : 'bg-amber-400 text-black hover:bg-amber-300 border border-amber-500'
+                    ? 'bg-blue-600 text-white scale-[0.98] shadow-inner ring-4 ring-blue-500/40 cursor-pointer'
+                    : isMotorRunning
+                    ? 'bg-emerald-600/85 text-white border border-emerald-500/60 shadow-[0_0_12px_rgba(16,185,129,0.3)] cursor-not-allowed opacity-90'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 cursor-pointer'
                 }`}
               >
                 <Zap className={`w-4 h-4 ${isBridging ? 'fill-current animate-bounce' : ''}`} />
                 <span>
                   {isBridging
-                    ? '¡PULSADO! PUENTE ACTIVO (SUELTA PARA MARCHA)'
-                    : 'CLIC O MANTENER PULSADO (IMPULSO R ⟷ S)'}
+                    ? isMotorRunning
+                      ? '⚡ ¡MOTOR ARRANCADO! SUELTA EL PULSADOR'
+                      : '¡PULSADO! INICIANDO ROTOR...'
+                    : isMotorRunning
+                    ? 'COMPRESOR EN MARCHA • RÉGIMEN NORMAL (2.850 RPM)'
+                    : '⚡ MANTÉN PULSADO 0.3s PARA ARRANCAR'}
                 </span>
               </button>
+
+              {isMotorRunning && powerOn && !klixonTripped && (
+                <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono flex items-center justify-between text-slate-300">
+                  <span className="text-emerald-400 font-semibold">Pulsador inactivo tras arranque</span>
+                  <span className="text-slate-400 text-[10px]">Parada: pulsa <strong>DESCONECTAR</strong></span>
+                </div>
+              )}
 
               {bridgeDurationMs > 2500 && (
                 <div className="p-2 rounded bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[11px] font-bold flex items-center gap-1.5 animate-pulse">
@@ -1444,7 +1575,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
                 </div>
               ) : (
                 <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-tiny leading-relaxed">
-                  Pulsa <strong>«ENERGIZAR (230V)»</strong> para suministrar corriente y luego mantén presionado el botón de puente <strong className="text-amber-500">R ⟷ S</strong> de 1 a 2 segundos para simular el arranque de taller con destornillador.
+                  Pulsa <strong>«ENERGIZAR (230V)»</strong> para suministrar corriente y luego mantén presionado el botón de puente <strong className="text-blue-500">R ⟷ S</strong> al menos 0.3 segundos para arrancar el compresor.
                 </div>
               )}
             </div>
@@ -1464,6 +1595,12 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal de Detalle de Protector Térmico Klixon */}
+      <KlixonModal
+        isOpen={isKlixonModalOpen}
+        onClose={() => setIsKlixonModalOpen(false)}
+      />
     </div>
   );
 };

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import directStartImg from '../assets/arranque directo.png';
 import { ZoomPanViewer } from './ZoomPanViewer';
+import { KlixonModal } from './KlixonModal';
 import {
   Zap,
   Power,
   Flame,
-  AlertTriangle
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import { UseDirectStartSimulatorReturn } from '../hooks/useDirectStartSimulator';
 
@@ -18,6 +20,8 @@ interface DirectStartBenchViewerProps {
 export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
   simulator,
 }) => {
+  const [isKlixonModalOpen, setIsKlixonModalOpen] = useState<boolean>(false);
+
   const {
     powerOn,
     isBridging,
@@ -45,6 +49,18 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
           <span className="text-tiny font-secondary text-slate-600 dark:text-slate-300 font-semibold truncate">
             Simulador de Arranque Directo de Compresor
           </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsKlixonModalOpen(true)}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-tiny font-mono font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-colors cursor-pointer"
+            title="Ver fotografía y despiece del Protector Térmico Klixon"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Ver Klixon</span>
+          </button>
         </div>
       </div>
 
@@ -378,7 +394,6 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
                       strokeWidth="1.8"
                       filter="drop-shadow(0 0 10px rgba(16,185,129,0.7))"
                     />
-                    <circle cx="-108" cy="0" r="4.5" fill="#34d399" className="animate-ping" />
                     <circle cx="-108" cy="0" r="3" fill="#10b981" />
                     <text
                       x="7"
@@ -484,44 +499,117 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
                   A
                 </text>
               </g>
+
+              {/* ÁREA SEMÁNTICA E INTERACTIVA DEL PULSADOR DE ARRANQUE (REUBICADA VERTICALMENTE HACIA ABAJO SOBRE EL SOMBRERETE AZUL DEL INTERRUPTOR) */}
+              <g
+                id="switch-pulsador-hitbox"
+                style={{
+                  pointerEvents: 'auto',
+                  cursor:
+                    isMotorRunning && !isBridging
+                      ? 'default'
+                      : !powerOn || klixonTripped
+                      ? 'not-allowed'
+                      : 'pointer',
+                }}
+                onClick={handleClickBridge}
+                onMouseDown={handleStartBridge}
+                onMouseUp={handleEndBridge}
+                onMouseLeave={handleEndBridge}
+                onTouchStart={handleStartBridge}
+                onTouchEnd={handleEndBridge}
+                role="button"
+                tabIndex={0}
+                aria-label="Pulsador puente R-S de arranque"
+              >
+                {/* Rectángulo de sombreado semántico reubicado verticalmente hacia abajo, posicionado exactamente sobre el sombrerete azul */}
+                <rect
+                  id="switch-pulsador-semantic-box"
+                  x="834"
+                  y="67"
+                  width="47"
+                  height="35"
+                  rx="7"
+                  ry="7"
+                  fill={
+                    isAlarmActive
+                      ? 'rgba(244, 63, 94, 0.45)'
+                      : isBridging
+                      ? 'rgba(59, 130, 246, 0.50)'
+                      : isMotorRunning
+                      ? 'rgba(16, 185, 129, 0.08)'
+                      : 'rgba(59, 130, 246, 0.22)'
+                  }
+                  stroke={
+                    isAlarmActive
+                      ? '#f43f5e'
+                      : isBridging
+                      ? '#3b82f6'
+                      : isMotorRunning
+                      ? 'rgba(16, 185, 129, 0.35)'
+                      : '#3b82f6'
+                  }
+                  strokeWidth={isAlarmActive || isBridging ? '2.5' : '1.8'}
+                  className={isAlarmActive ? 'animate-bounce' : ''}
+                >
+                  <title>
+                    {isMotorRunning
+                      ? 'Compresor en marcha normal. El pulsador de arranque ha cumplido su función y queda inactivo.'
+                      : 'Pulsador de arranque (Puente R-S): Mantén presionado 0.3s para arrancar automáticamente'}
+                  </title>
+                </rect>
+
+                {/* Halo interactivo de guía cuando está energizado y listo para pulsar */}
+                {!isMotorRunning && powerOn && !klixonTripped && !isBridging && (
+                  <rect
+                    x="831"
+                    y="64"
+                    width="53"
+                    height="41"
+                    rx="9"
+                    ry="9"
+                    fill="none"
+                    stroke="#93c5fd"
+                    strokeWidth="1.2"
+                    strokeDasharray="4 3"
+                    opacity="0.8"
+                    className="animate-pulse"
+                  />
+                )}
+
+                {/* Zona de impacto táctil invisible ligeramente más amplia para interacción fluida */}
+                <rect
+                  x="824"
+                  y="57"
+                  width="67"
+                  height="55"
+                  fill="transparent"
+                  stroke="none"
+                />
+              </g>
             </svg>
 
             {isBridging && (
               <div
-                className="absolute pointer-events-none select-none z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/95 border-2 border-amber-400 text-amber-100 font-mono text-xs font-black shadow-[0_0_25px_rgba(245,158,11,0.7)] backdrop-blur-md animate-fadeIn"
+                className={`absolute pointer-events-none select-none z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 font-mono text-xs font-black backdrop-blur-md animate-fadeIn ${
+                  isAlarmActive
+                    ? 'bg-rose-950/95 border-rose-400 text-rose-100 shadow-[0_0_25px_rgba(244,63,94,0.9)] animate-bounce'
+                    : isMotorRunning
+                    ? 'bg-emerald-950/95 border-emerald-400 text-emerald-100 shadow-[0_0_25px_rgba(16,185,129,0.7)]'
+                    : 'bg-blue-950/95 border-blue-400 text-blue-100 shadow-[0_0_25px_rgba(59,130,246,0.7)]'
+                }`}
                 style={{ left: '50%', top: '3.5%', transform: 'translateX(-50%)' }}
               >
-                <Zap className="w-4 h-4 text-amber-300 animate-bounce" />
-                <span>MANTÉN PULSADO: {(bridgeDurationMs / 1000).toFixed(1)}s / 2.0s • ACELERANDO ROTOR...</span>
+                <Zap className={`w-4 h-4 ${isAlarmActive ? 'text-rose-300 animate-spin' : isMotorRunning ? 'text-emerald-300' : 'text-blue-300 animate-bounce'}`} />
+                <span>
+                  {isAlarmActive
+                    ? `🚨 ¡ERROR (> 3s)! SUELTA EL PULSADOR (${(bridgeDurationMs / 1000).toFixed(1)}s)`
+                    : isMotorRunning
+                    ? `⚡ MOTOR ARRANCADO (${(bridgeDurationMs / 1000).toFixed(1)}s) • SUELTA EL BOTÓN`
+                    : `PULSADO: ${(bridgeDurationMs / 1000).toFixed(1)}s (mín. 0.3s) • ACELERANDO ROTOR...`}
+                </span>
               </div>
             )}
-
-            {/* 2. PHYSICAL SWITCH HIT-TARGET OVER THE IMAGE (LIMPIO, SIN BORDE AZUL) */}
-            <div
-              id="switch-pulsador-hitbox"
-              className={`absolute pointer-events-auto cursor-pointer select-none transition-all ${
-                isAlarmActive
-                  ? 'bg-rose-500/20 ring-2 ring-rose-500 rounded-lg animate-bounce'
-                  : isBridging
-                  ? 'bg-amber-400/20 rounded-lg scale-95'
-                  : 'bg-transparent'
-              }`}
-              style={{
-                left: '85.8%',
-                top: '16.0%',
-                transform: 'translate(-50%, -50%)',
-                width: '5.5%',
-                height: '10.0%',
-              }}
-              onClick={handleClickBridge}
-              onMouseDown={handleStartBridge}
-              onMouseUp={handleEndBridge}
-              onMouseLeave={handleEndBridge}
-              onTouchStart={handleStartBridge}
-              onTouchEnd={handleEndBridge}
-              title="Pulsador de arranque: Haz clic y mantén pulsado 1.5 a 2.5s para arrancar el motor"
-              aria-label="Pulsador puente R-S"
-            />
 
             {/* 3. INTERACTIVE 230V MAINS SWITCH: REUBICADO JUNTO A LA ENTRADA L/N (Siguiendo la flecha izquierda) */}
             <div
@@ -574,6 +662,40 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
                 </div>
               </div>
             )}
+
+            {/* 4. ETIQUETA KLIXON INTERACTIVA (SOBRE LA IMAGEN DEL BANCO) */}
+            {/* Al pulsar sobre la etiqueta KLIXON de la imagen se muestra la ventana modal con klixon.png */}
+            {/* Dimensiones y curvatura adaptadas exactamente al marco de la etiqueta marrón: 92x70px sobre 1024x678 */}
+            <div
+              id="klixon-hotspot-label"
+              className="absolute pointer-events-auto cursor-pointer select-none group z-20"
+              style={{
+                left: '40.04%',
+                top: '46.75%',
+                transform: 'translate(-50%, -50%)',
+                width: '8.98%',
+                height: '10.32%',
+              }}
+              onClick={() => setIsKlixonModalOpen(true)}
+              title="Protector Térmico Klixon: Clic para ver fotografía y despiece en ventana modal"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                  e.preventDefault();
+                  setIsKlixonModalOpen(true);
+                }
+              }}
+            >
+              {/* Marco interactivo con idéntico alto, ancho y radio de curvatura que la etiqueta KLIXON */}
+              <div className="w-full h-full rounded-[14px] border-2 border-amber-400/40 group-hover:border-amber-400 group-hover:bg-amber-400/20 group-hover:shadow-[0_0_18px_rgba(251,191,36,0.7)] transition-all flex flex-col items-center justify-center relative">
+                {/* Tooltip flotante al hacer hover */}
+                <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-30 bg-slate-950/95 text-amber-300 border border-amber-400/80 rounded-md px-2 py-0.5 text-[9px] font-mono font-black whitespace-nowrap shadow-2xl flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3 text-amber-400" />
+                  <span>KLIXON • Clic para ver modal</span>
+                </div>
+              </div>
+            </div>
           </ZoomPanViewer>
 
         {/* FLOATING CRITICAL ALARM OVERLAY BANNER IF SWITCH IS HELD OVER 2.5-3 SECONDS */}
@@ -595,7 +717,7 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
       {/* 4. Bottom Quick Status Strip */}
       <div className="pt-2 flex items-center justify-between text-tiny font-mono text-slate-500 dark:text-slate-400 shrink-0">
         <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${isAlarmActive ? 'bg-rose-500 animate-ping' : isBridging ? 'bg-amber-400 animate-ping' : isMotorRunning ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
+          <span className={`w-1.5 h-1.5 rounded-full ${isAlarmActive ? 'bg-rose-500 animate-ping' : isBridging ? 'bg-blue-400 animate-ping' : isMotorRunning ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
           <span>
             {isAlarmActive
               ? '⚠️ Alarma activa: el pulsador no debe mantenerse más de 2-3 segundos'
@@ -603,13 +725,19 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
               ? 'Uniendo bornes R y S a través del interruptor para impulsar el rotor...'
               : isMotorRunning
               ? 'Rotor en giro permanente a ~2.850 RPM. Prueba de arranque superada con éxito.'
-              : 'Pulsa «ENERGIZAR (230V)» y mantén presionado 1.5 - 2.5s el botón del panel para arrancar'}
+              : 'Pulsa «ENERGIZAR (230V)» y mantén pulsado 0.3s el botón del panel para arrancar'}
           </span>
         </div>
         <span className="text-[11px] hidden sm:inline text-slate-400">
           Zoom &amp; Paneo activados
         </span>
       </div>
+
+      {/* Ventana Modal de Detalle del Protector Térmico Klixon */}
+      <KlixonModal
+        isOpen={isKlixonModalOpen}
+        onClose={() => setIsKlixonModalOpen(false)}
+      />
     </div>
   );
 };

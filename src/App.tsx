@@ -17,6 +17,9 @@ import { StartingSystemsControlsPanel } from './components/StartingSystemsContro
 import { StartingSystemModal } from './components/StartingSystemModal';
 import { WindingFaultSchematicViewer, WindingFaultType } from './components/WindingFaultSchematicViewer';
 import { SchematicVariant } from './components/IntuitiveSchematicDiagram';
+import { useMechanicalCompressionSimulator } from './hooks/useMechanicalCompressionSimulator';
+import { MechanicalCompressionBenchViewer } from './components/MechanicalCompressionBenchViewer';
+import { MechanicalCompressionControlsPanel } from './components/MechanicalCompressionControlsPanel';
 import {
   Activity,
   Zap,
@@ -31,6 +34,7 @@ import {
   ShieldCheck,
   Wrench,
   BookOpen,
+  Gauge,
 } from 'lucide-react';
 
 export default function App() {
@@ -92,8 +96,10 @@ export default function App() {
   const [isStartingModalOpen, setIsStartingModalOpen] = useState<boolean>(false);
   const [modalVariant, setModalVariant] = useState<SchematicVariant>('HST_CSR_RELE');
 
-  // Winding Faults state
+  // Winding Faults & Mechanical Diagnostics state
   const [selectedFault, setSelectedFault] = useState<WindingFaultType>('ground_fault');
+  const [averiasSubTab, setAveriasSubTab] = useState<'electricas' | 'mecanico'>('mecanico');
+  const mechanicalSimulator = useMechanicalCompressionSimulator();
 
   // Helper to parse technician inputs (supports comma, decimal, empty, OL, infinity)
   function parseTechnicianInput(valStr: string): { val: number | null; isInfinity: boolean } {
@@ -423,7 +429,7 @@ export default function App() {
               )}
 
               {/* SOLAPA 4: ESQUEMA DE AVERÍAS INTERNAS Y BOBINADOS */}
-              {activeTab === 'averias' && (
+              {activeTab === 'averias' && averiasSubTab === 'electricas' && (
                 <WindingFaultSchematicViewer
                   selectedFault={selectedFault}
                   onSelectFault={setSelectedFault}
@@ -431,6 +437,11 @@ export default function App() {
                   rArranque={rArranqueInput}
                   rTotal={rTotalInput}
                 />
+              )}
+
+              {/* SOLAPA 4 (SUB 2): BANCO DE PRUEBA MECÁNICA Y LÁMINAS FLAPPER */}
+              {activeTab === 'averias' && averiasSubTab === 'mecanico' && (
+                <MechanicalCompressionBenchViewer simulator={mechanicalSimulator} />
               )}
 
               {/* SOLAPA 5: PRESETS */}
@@ -831,10 +842,40 @@ export default function App() {
                 </div>
               )}
 
-              {/* TAB 4: GUÍA DE AVERÍAS */}
+              {/* TAB 4: GUÍA DE AVERÍAS Y RENDIMIENTO MECÁNICO */}
               {activeTab === 'averias' && (
-                <div className="space-y-3 flex-1 flex flex-col justify-between">
-                  <QuickTroubleshootingGuide />
+                <div className="space-y-2.5 flex-1 flex flex-col justify-between">
+                  {averiasSubTab === 'electricas' ? (
+                    <div className="space-y-2 flex-1 flex flex-col justify-between">
+                      {/* Sub-Tab Switcher in Averías */}
+                      <div className="flex items-center justify-between gap-1.5 p-1 rounded-lg bg-slate-100 dark:bg-[#0a0d16] border border-slate-200 dark:border-slate-800 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setAveriasSubTab('electricas')}
+                          className="flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-amber-400 text-black shadow-sm"
+                        >
+                          <Wrench className="w-3.5 h-3.5" />
+                          <span>1. Averías Eléctricas (Bobinados)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAveriasSubTab('mecanico')}
+                          className="flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
+                        >
+                          <Gauge className="w-3.5 h-3.5" />
+                          <span>2. Válvulas Flapper y Compresión</span>
+                        </button>
+                      </div>
+                      <QuickTroubleshootingGuide />
+                    </div>
+                  ) : (
+                    <MechanicalCompressionControlsPanel
+                      simulator={mechanicalSimulator}
+                      averiasSubTab={averiasSubTab}
+                      onSelectSubTab={setAveriasSubTab}
+                      onOpenReport={() => setIsReportModalOpen(true)}
+                    />
+                  )}
                 </div>
               )}
 
@@ -928,6 +969,13 @@ export default function App() {
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
         evaluation={evaluation}
+        mechanicalData={{
+          targetPsi: parseFloat(mechanicalSimulator.maxPressureInput) || 0,
+          retentionBehavior: mechanicalSimulator.retentionBehavior,
+          title: mechanicalSimulator.activeCaseInfo.title,
+          badge: mechanicalSimulator.activeCaseInfo.badge,
+          isApto: mechanicalSimulator.verdict === 'OPTIMO',
+        }}
       />
 
       {/* Step-by-step Equations and Mathematical Rules Modal */}

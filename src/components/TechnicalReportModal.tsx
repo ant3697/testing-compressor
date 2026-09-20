@@ -1,17 +1,27 @@
 import React, { useState } from 'react';
 import { DiagnosticEvaluation } from '../types';
-import { Printer, X, FileText, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Printer, X, FileText, CheckCircle2, AlertTriangle, ShieldCheck, ShieldAlert, Gauge, Clock, Droplets, Zap } from 'lucide-react';
+
+interface MechanicalReportData {
+  targetPsi: number;
+  retentionBehavior: 'holds' | 'slow_drop' | 'fast_drop';
+  title: string;
+  badge: string;
+  isApto: boolean;
+}
 
 interface TechnicalReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   evaluation: DiagnosticEvaluation;
+  mechanicalData?: MechanicalReportData;
 }
 
 export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
   isOpen,
   onClose,
   evaluation,
+  mechanicalData,
 }) => {
   const [equipmentName, setEquipmentName] = useState('Vitrina Frigorífica / Nevera');
   const [compressorModel, setCompressorModel] = useState('Hermético Monofásico 1/4 HP');
@@ -294,27 +304,110 @@ export const TechnicalReportModal: React.FC<TechnicalReportModalProps> = ({
             </span>
           </div>
 
+          {/* Mechanical Compression and Valve Test */}
+          <div
+            className="p-3 rounded-md border text-small flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-secondary"
+            style={{
+              backgroundColor: 'var(--bg-alt)',
+              borderColor: 'var(--border-subtle)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <Gauge className="w-4 h-4 text-amber-500 shrink-0" />
+              <div>
+                <span className="font-bold block">
+                  Prueba de Rendimiento Mecánico y Láminas Flapper
+                </span>
+                <span className="text-tiny" style={{ color: 'var(--text-muted)' }}>
+                  Compresión en descarga y estanqueidad de retención al corte (0V)
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {mechanicalData ? (
+                <span
+                  className="font-mono font-bold px-2.5 py-1 rounded-sm text-tiny border"
+                  style={{
+                    backgroundColor: mechanicalData.isApto ? 'var(--status-success-bg)' : 'var(--status-danger-bg)',
+                    color: mechanicalData.isApto ? 'var(--status-success-dark)' : 'var(--status-danger-dark)',
+                    borderColor: mechanicalData.isApto ? 'var(--status-success-base)' : 'var(--status-danger-base)',
+                  }}
+                >
+                  {mechanicalData.targetPsi} PSI • {mechanicalData.badge}
+                </span>
+              ) : (
+                <span className="font-mono text-tiny px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                  Prueba mecánica no realizada (Pendiente)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Buenas Prácticas de Taller y Seguridad Eléctrica (Protocolo Maestro Cifu) */}
+          <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 font-secondary space-y-2">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-small">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
+              <span>Buenas Prácticas de Taller y Seguridad Eléctrica (Protocolo Maestro Cifu)</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-tiny">
+              <div className="flex items-start gap-1.5 text-slate-700 dark:text-slate-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Protección contra proyecciones de aceite:</strong> Cubrir tomas abiertas con trapo o deflector al arrancar y usar gafas protectoras.
+                </span>
+              </div>
+              <div className="flex items-start gap-1.5 text-slate-700 dark:text-slate-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Límite de aire ambiente (&lt;30s):</strong> No mantener compresión de aire húmedo prolongada para evitar hidrólisis del aceite POE/PAG.
+                </span>
+              </div>
+              <div className="flex items-start gap-1.5 text-slate-700 dark:text-slate-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Descarga segura de condensadores:</strong> Descargar con resistencia de 20 kΩ / 5W, nunca cortocircuitar con destornillador.
+                </span>
+              </div>
+              <div className="flex items-start gap-1.5 text-slate-700 dark:text-slate-300">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Tierra obligatoria (PE) en banco:</strong> Chasis conectado a tierra antes de alimentar a 230V para protección diferencial.
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Official Technical Verdict */}
           <div
             className="p-4 rounded-xl border font-secondary"
             style={{
-              backgroundColor: evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' ? 'var(--status-success-bg)' : 'var(--status-danger-bg)',
-              borderColor: evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' ? 'var(--status-success-base)' : 'var(--status-danger-base)',
-              color: evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' ? 'var(--status-success-dark)' : 'var(--status-danger-dark)',
+              backgroundColor: (evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' && (!mechanicalData || mechanicalData.isApto))
+                ? 'var(--status-success-bg)'
+                : 'var(--status-danger-bg)',
+              borderColor: (evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' && (!mechanicalData || mechanicalData.isApto))
+                ? 'var(--status-success-base)'
+                : 'var(--status-danger-base)',
+              color: (evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' && (!mechanicalData || mechanicalData.isApto))
+                ? 'var(--status-success-dark)'
+                : 'var(--status-danger-dark)',
             }}
           >
             <div className="flex items-center gap-2.5 mb-1.5">
-              {evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' ? (
+              {(evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' && (!mechanicalData || mechanicalData.isApto)) ? (
                 <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: 'var(--status-success-base)' }} />
               ) : (
                 <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: 'var(--status-danger-base)' }} />
               )}
               <h4 className="text-body font-bold uppercase tracking-wider">
-                Veredicto Técnico Final: {evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' ? 'APTO PARA EL SERVICIO' : 'NO APTO / REQUIERE SUSTITUCIÓN'}
+                Veredicto Técnico Final: {(evaluation.veredictoGlobal === 'APTO_PARA_SERVICIO' && (!mechanicalData || mechanicalData.isApto))
+                  ? 'APTO PARA EL SERVICIO'
+                  : 'NO APTO / REQUIERE SUSTITUCIÓN'}
               </h4>
             </div>
             <p className="text-small leading-relaxed" style={{ color: 'var(--text-primary)' }}>
-              {evaluation.diagnosticoTexto}
+              {mechanicalData && !mechanicalData.isApto
+                ? `FALLO MECÁNICO: Aunque el compresor pudiera estar eléctricamente comprobado, la prueba de compresión dictamina: ${mechanicalData.title} (${mechanicalData.badge}). No genera el salto de presión necesario o no retiene contrapresión.`
+                : evaluation.diagnosticoTexto}
             </p>
           </div>
         </div>
