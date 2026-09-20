@@ -1,0 +1,6 @@
+{
+  "name": "Comprobador de Compresores Frigoríficos",
+  "description": "Comprobación y diagnóstico de compresores monofásicos herméticos de refrigeración: identificación de bornes (C, R, S), comprobación con multímetro, fugas a tierra y esquemas de arranque (RSIR, PSC, CSIR, CSR).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
