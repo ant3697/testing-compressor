@@ -665,16 +665,16 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
 
             {/* 4. ETIQUETA KLIXON INTERACTIVA (SOBRE LA IMAGEN DEL BANCO) */}
             {/* Al pulsar sobre la etiqueta KLIXON de la imagen se muestra la ventana modal con klixon.png */}
-            {/* Dimensiones y curvatura adaptadas exactamente al marco de la etiqueta marrón: 92x70px sobre 1024x678 */}
+            {/* Dimensiones y curvatura adaptadas exactamente al marco de la etiqueta marrón */}
             <div
               id="klixon-hotspot-label"
               className="absolute pointer-events-auto cursor-pointer select-none group z-20"
               style={{
                 left: '40.04%',
-                top: '46.75%',
+                top: '47.75%',
                 transform: 'translate(-50%, -50%)',
-                width: '8.98%',
-                height: '10.32%',
+                width: '8.4%',
+                height: '8.4%',
               }}
               onClick={() => setIsKlixonModalOpen(true)}
               title="Protector Térmico Klixon: Clic para ver fotografía y despiece en ventana modal"
@@ -688,7 +688,7 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
               }}
             >
               {/* Marco interactivo con idéntico alto, ancho y radio de curvatura que la etiqueta KLIXON */}
-              <div className="w-full h-full rounded-[14px] border-2 border-amber-400/40 group-hover:border-amber-400 group-hover:bg-amber-400/20 group-hover:shadow-[0_0_18px_rgba(251,191,36,0.7)] transition-all flex flex-col items-center justify-center relative">
+              <div className="w-full h-full rounded-[10px] border-2 border-amber-400/40 group-hover:border-amber-400 group-hover:bg-amber-400/20 group-hover:shadow-[0_0_18px_rgba(251,191,36,0.7)] transition-all flex flex-col items-center justify-center relative">
                 {/* Tooltip flotante al hacer hover */}
                 <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-30 bg-slate-950/95 text-amber-300 border border-amber-400/80 rounded-md px-2 py-0.5 text-[9px] font-mono font-black whitespace-nowrap shadow-2xl flex items-center gap-1">
                   <ShieldAlert className="w-3 h-3 text-amber-400" />
@@ -712,25 +712,6 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
             </div>
           </div>
         )}
-      </div>
-
-      {/* 4. Bottom Quick Status Strip */}
-      <div className="pt-2 flex items-center justify-between text-tiny font-mono text-slate-500 dark:text-slate-400 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${isAlarmActive ? 'bg-rose-500 animate-ping' : isBridging ? 'bg-blue-400 animate-ping' : isMotorRunning ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
-          <span>
-            {isAlarmActive
-              ? '⚠️ Alarma activa: el pulsador no debe mantenerse más de 2-3 segundos'
-              : isBridging
-              ? 'Uniendo bornes R y S a través del interruptor para impulsar el rotor...'
-              : isMotorRunning
-              ? 'Rotor en giro permanente a ~2.850 RPM. Prueba de arranque superada con éxito.'
-              : 'Pulsa «ENERGIZAR (230V)» y mantén pulsado 0.3s el botón del panel para arrancar'}
-          </span>
-        </div>
-        <span className="text-[11px] hidden sm:inline text-slate-400">
-          Zoom &amp; Paneo activados
-        </span>
       </div>
 
       {/* Ventana Modal de Detalle del Protector Térmico Klixon */}

@@ -797,10 +797,10 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
                   className="absolute pointer-events-auto cursor-pointer select-none group z-20"
                   style={{
                     left: '40.04%',
-                    top: '46.75%',
+                    top: '47.75%',
                     transform: 'translate(-50%, -50%)',
-                    width: '8.98%',
-                    height: '10.32%',
+                    width: '8.4%',
+                    height: '8.4%',
                   }}
                   onClick={() => setIsKlixonModalOpen(true)}
                   title="Protector Térmico Klixon: Clic para ver fotografía y despiece en ventana modal"
@@ -813,7 +813,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
                     }
                   }}
                 >
-                  <div className="w-full h-full rounded-[14px] border-2 border-amber-400/40 group-hover:border-amber-400 group-hover:bg-amber-400/20 group-hover:shadow-[0_0_18px_rgba(251,191,36,0.7)] transition-all flex flex-col items-center justify-center relative">
+                  <div className="w-full h-full rounded-[10px] border-2 border-amber-400/40 group-hover:border-amber-400 group-hover:bg-amber-400/20 group-hover:shadow-[0_0_18px_rgba(251,191,36,0.7)] transition-all flex flex-col items-center justify-center relative">
                     <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-30 bg-slate-950/95 text-amber-300 border border-amber-400/80 rounded-md px-2 py-0.5 text-[9px] font-mono font-black whitespace-nowrap shadow-2xl flex items-center gap-1">
                       <ShieldAlert className="w-3 h-3 text-amber-400" />
                       <span>KLIXON • Clic para ver modal</span>

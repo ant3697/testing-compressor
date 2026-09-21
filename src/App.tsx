@@ -366,11 +366,6 @@ export default function App() {
               Sistema de comprobación Pro • Regla de resistencias de devanados y aislamiento dieléctrico
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="text-tiny font-mono px-2 py-0.5 rounded border border-slate-300 dark:border-slate-800 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400">
-              Multímetro KT-3900
-            </span>
-          </div>
         </div>
 
         {/* 3. COCKPIT CONTAINER (Sleek side-by-side Bento layout with fixed uniform dimensions) */}
@@ -940,17 +935,8 @@ export default function App() {
             <span>Software de Diagnóstico de Motores Herméticos Monofásicos</span>
           </div>
 
-          {/* Right Action Buttons matching capture: [ Σ Ecuaciones ] [ ❓ Ayuda ] */}
+          {/* Right Action Buttons: [ ❓ Ayuda ] */}
           <div className="flex items-center gap-2 font-mono text-tiny">
-            <button
-              type="button"
-              onClick={() => setIsEquationsModalOpen(true)}
-              className="px-2.5 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <span>Σ</span>
-              <span>Ecuaciones</span>
-            </button>
-
             <button
               type="button"
               onClick={() => setIsHelpModalOpen(true)}
