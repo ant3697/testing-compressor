@@ -119,7 +119,7 @@ export const StartingSystemsSection: React.FC = () => {
             </div>
             <div>
               <h5 className="font-bold text-slate-900 dark:text-white text-small">
-                Relé de Arranque (Amperimétrico)
+                Relé de Intensidad (Arranque)
               </h5>
               <p className="text-tiny text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Su bobina está en serie con la bobina de marcha (<strong>R</strong>). El pico de corriente inicial de arranque atrae el émbolo cerrando el contacto N.A. hacia el borne <strong>S</strong>. Al acelerar el motor, la corriente desciende y el émbolo cae por gravedad.

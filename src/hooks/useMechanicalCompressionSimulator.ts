@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { startCompressorHum, stopCompressorHum } from '../utils/audio';
 
 export type CompressionPreset = 'optimo' | 'valvula_rota' | 'desgaste' | 'biela_rota' | 'personalizado';
 export type RetentionBehavior = 'holds' | 'slow_drop' | 'fast_drop';
@@ -97,11 +98,13 @@ export function useMechanicalCompressionSimulator() {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      stopCompressorHum();
     };
   }, []);
 
   const resetSimulation = () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    stopCompressorHum();
     setCurrentPsi(0);
     setIsCompressing(false);
     setIsMeasuringRetention(false);
@@ -126,6 +129,7 @@ export function useMechanicalCompressionSimulator() {
     setIsMeasuringRetention(false);
     setIsCompressing(true);
     setRetentionElapsedSec(0);
+    startCompressorHum(0.055, true);
 
     const parsedTarget = parseFloat(maxPressureInput) || 0;
 
@@ -143,6 +147,7 @@ export function useMechanicalCompressionSimulator() {
   // Cut 230V to 0V and measure valve seal retention
   const stopAndMeasureRetention = () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    stopCompressorHum();
     setIsCompressing(false);
     setIsMeasuringRetention(true);
     setInitialRetentionPsi(currentPsi);

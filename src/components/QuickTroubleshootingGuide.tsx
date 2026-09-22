@@ -40,22 +40,46 @@ const TROUBLESHOOTING_DATA: FaqItem[] = [
   },
   {
     question: '¿Cómo comprobar el Protector Térmico (Klixon) con el multímetro?',
-    symptom: 'Verificación previa de componentes auxiliares.',
-    cause: 'Bimetal que abre por calor o sobreintensidad.',
-    multimeterTest: 'Desconectar el Klixon del compresor. Medir resistencia entre sus 2 terminales en frío con el multímetro: DEBE marcar continuidad casi 0 Ω (0.0 a 0.2 Ω).',
-    action: 'Si en frío marca "1." (infinito), el Klixon está quemado con los contactos abiertos. Sustituir Klixon.',
+    symptom: 'Verificación en banco del protector térmico con bimetal y calefactor.',
+    cause: 'Disco bimetálico térmico y filamento calefactor de sobreintensidad en serie.',
+    multimeterTest: 'Medición entre bornes externos accesibles 1 y 3 (el punto 2 es una unión interna sellada en la cápsula y no accesible para punteras): en frío mide la serie completa de disco bimetálico y calefactor (~2.3 Ω). Si se calienta por sobrecarga (>105°C), abre el circuito marcando "1 ." (O.L).',
+    action: 'Si entre bornes 1-3 marca "1." (O.L) en frío, el bimetal o el calefactor están cortados/abiertos. En cualquiera de los casos sustituir el Klixon.',
   },
   {
-    question: '¿Cómo comprobar el Relé Amperimétrico (R. Int) con el multímetro?',
-    symptom: 'Verificación del relé de corriente en sistemas RSIR y CSIR.',
-    cause: 'Bobina de corriente y contacto normalmente abierto por gravedad.',
-    multimeterTest: '1) Con el relé en su posición vertical de trabajo: medir entre terminales de contacto -> Debe marcar ABIERTO ("1."). 2) Dar la vuelta al relé (boca abajo) para que caiga la armadura por gravedad -> Debe marcar CONTINUIDAD (0 Ω).',
-    action: 'Si no cierra al invertirlo o no abre al ponerlo derecho, el relé está trabado o sus contactos quemados. Sustituir relé.',
+    question: '¿Cómo comprobar el Relé de Intensidad (R. Int) con el multímetro?',
+    symptom: 'Verificación del relé de intensidad con unión P1-P3 en sistemas RSIR y CSIR.',
+    cause: 'Bobina de intensidad de hilo grueso y contacto móvil normalmente abierto por gravedad.',
+    multimeterTest: '1) Contactos (P1-P2): en posición vertical de trabajo debe marcar ABIERTO ("1 ."); al invertir 180° por gravedad debe cerrar a 0.0 Ω con pitido. 2) Bobina (P1-P3): mide la resistencia de la bobina (~0.3 Ω). 3) Salida (P2-P3): en vertical O.L y en invertido 0.3 Ω.',
+    action: 'Si da 0.0 Ω en vertical, los contactos están soldados. Si no cierra al invertir o la bobina marca O.L, sustituir el relé de intensidad.',
   },
 ];
 
-export const QuickTroubleshootingGuide: React.FC = () => {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+export interface QuickTroubleshootingGuideProps {
+  selectedCaseIndex?: number;
+  onSelectCase?: (index: number) => void;
+}
+
+export const QuickTroubleshootingGuide: React.FC<QuickTroubleshootingGuideProps> = ({
+  selectedCaseIndex = 0,
+  onSelectCase,
+}) => {
+  const [internalOpenIndex, setInternalOpenIndex] = useState<number | null>(selectedCaseIndex);
+
+  React.useEffect(() => {
+    if (selectedCaseIndex !== undefined) {
+      setInternalOpenIndex(selectedCaseIndex);
+    }
+  }, [selectedCaseIndex]);
+
+  const activeIndex = selectedCaseIndex !== undefined ? selectedCaseIndex : internalOpenIndex;
+
+  const handleToggle = (idx: number) => {
+    const next = activeIndex === idx ? null : idx;
+    setInternalOpenIndex(next);
+    if (next !== null && onSelectCase) {
+      onSelectCase(next);
+    }
+  };
 
   return (
     <div className="space-y-3 font-secondary">
@@ -71,7 +95,7 @@ export const QuickTroubleshootingGuide: React.FC = () => {
 
       <div className="space-y-3">
         {TROUBLESHOOTING_DATA.map((item, idx) => {
-          const isOpen = openIndex === idx;
+          const isOpen = activeIndex === idx;
           return (
             <div
               key={idx}
@@ -82,7 +106,7 @@ export const QuickTroubleshootingGuide: React.FC = () => {
             >
               <button
                 type="button"
-                onClick={() => setOpenIndex(isOpen ? null : idx)}
+                onClick={() => handleToggle(idx)}
                 className="w-full p-3.5 text-left flex items-center justify-between gap-3 transition-colors cursor-pointer"
                 style={{
                   backgroundColor: isOpen ? 'var(--bg-alt)' : 'transparent',
@@ -92,14 +116,21 @@ export const QuickTroubleshootingGuide: React.FC = () => {
                   <span
                     className="w-5 h-5 rounded-sm font-mono text-tiny font-bold flex items-center justify-center shrink-0 mt-0.5 border"
                     style={{
-                      backgroundColor: 'var(--accent-ghost)',
+                      backgroundColor: isOpen ? 'var(--accent-base)' : 'var(--accent-ghost)',
                       borderColor: 'var(--accent-base)',
-                      color: 'var(--accent-base)',
+                      color: isOpen ? '#000000' : 'var(--accent-base)',
                     }}
                   >
                     {idx + 1}
                   </span>
-                  <span className="text-body font-bold">{item.question}</span>
+                  <div>
+                    <span className="text-body font-bold">{item.question}</span>
+                    {isOpen && (
+                      <span className="inline-block ml-2 text-[10px] font-mono font-bold bg-amber-400 text-black px-1.5 py-0.2 rounded">
+                        ACTIVO EN ESQUEMA SVG
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {isOpen ? (
                   <ChevronUp className="w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }} />

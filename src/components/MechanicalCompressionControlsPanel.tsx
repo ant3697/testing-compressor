@@ -64,19 +64,6 @@ export const MechanicalCompressionControlsPanel: React.FC<MechanicalCompressionC
       <div className="flex items-center justify-between gap-1.5 p-1 rounded-lg bg-slate-100 dark:bg-[#0a0d16] border border-slate-200 dark:border-slate-800 shrink-0">
         <button
           type="button"
-          onClick={() => onSelectSubTab('electricas')}
-          className={`flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            averiasSubTab === 'electricas'
-              ? 'bg-amber-400 text-black shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
-          }`}
-        >
-          <Wrench className="w-3.5 h-3.5" />
-          <span>1. Averías Eléctricas (Bobinados)</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => onSelectSubTab('mecanico')}
           className={`flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             averiasSubTab === 'mecanico'
@@ -85,7 +72,20 @@ export const MechanicalCompressionControlsPanel: React.FC<MechanicalCompressionC
           }`}
         >
           <Gauge className="w-3.5 h-3.5" />
-          <span>2. Válvulas Flapper y Compresión</span>
+          <span>1. Válvulas Flapper y Compresión</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectSubTab('electricas')}
+          className={`flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            averiasSubTab === 'electricas'
+              ? 'bg-amber-400 text-black shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white'
+          }`}
+        >
+          <Wrench className="w-3.5 h-3.5" />
+          <span>2. Averías Eléctricas (Bobinados)</span>
         </button>
       </div>
 

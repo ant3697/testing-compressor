@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { X, ShieldAlert, Zap, Thermometer, CheckCircle2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { X, ShieldAlert, Zap, Thermometer, CheckCircle2, AlertTriangle } from 'lucide-react';
 import klixonImg from '../assets/klixon.png';
+import { ZoomPanViewer } from './ZoomPanViewer';
 
 interface KlixonModalProps {
   isOpen: boolean;
@@ -8,8 +9,6 @@ interface KlixonModalProps {
 }
 
 export const KlixonModal: React.FC<KlixonModalProps> = ({ isOpen, onClose }) => {
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-
   // Close on Escape key press
   useEffect(() => {
     if (!isOpen) return;
@@ -21,13 +20,6 @@ export const KlixonModal: React.FC<KlixonModalProps> = ({ isOpen, onClose }) => 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
-
-  // Reset zoom whenever modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setZoomLevel(1);
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -77,55 +69,29 @@ export const KlixonModal: React.FC<KlixonModalProps> = ({ isOpen, onClose }) => 
 
         {/* Modal Scrollable Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-slate-200">
-          {/* Main Visual Display: klixon.png */}
+          {/* Main Visual Display: klixon.png with ZoomPanViewer */}
           <div className="relative rounded-xl border border-slate-800 bg-slate-950 overflow-hidden shadow-inner flex flex-col items-center justify-center">
-            {/* Image Toolbar */}
-            <div className="w-full flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 text-[11px] font-mono text-slate-400">
-              <span className="font-semibold text-amber-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                Fotografía de Detalle • Klixon en Taller
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel((z) => Math.max(0.75, z - 0.25))}
-                  className="p-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                  title="Alejar imagen"
-                >
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <span className="px-1 text-[10px] font-bold text-slate-300">{Math.round(zoomLevel * 100)}%</span>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.25))}
-                  className="p-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                  title="Acercar imagen"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel(1)}
-                  className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer ml-1"
-                  title="Restablecer tamaño original"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            {/* Image Container */}
-            <div className="w-full overflow-auto max-h-[380px] p-2 flex items-center justify-center bg-slate-950/70">
-              <img
-                src={klixonImg}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/klixon.png';
-                }}
-                alt="Detalle del Protector Térmico Klixon"
-                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
-                className="max-h-[340px] w-auto max-w-full object-contain rounded-lg transition-transform duration-200 shadow-md select-none pointer-events-auto"
-                draggable={false}
-              />
+            {/* Image Container with Zoom and Panning */}
+            <div className="relative w-full h-[360px] sm:h-[400px] overflow-hidden bg-slate-950/80 flex items-center justify-center">
+              <ZoomPanViewer
+                className="w-full h-full flex items-center justify-center"
+                containerClassName="w-full h-full flex items-center justify-center p-2"
+                initialZoom={1}
+                minZoom={0.75}
+                maxZoom={4}
+                toolbarPosition="top-right"
+                title="Fotografía de Detalle: Protector Térmico Klixon en Taller"
+              >
+                <img
+                  src={klixonImg}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/klixon.png';
+                  }}
+                  alt="Detalle del Protector Térmico Klixon"
+                  className="max-h-[340px] w-auto max-w-full object-contain rounded-lg shadow-md select-none pointer-events-none"
+                  draggable={false}
+                />
+              </ZoomPanViewer>
             </div>
           </div>
 

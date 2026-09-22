@@ -37,6 +37,29 @@ import {
   Gauge,
 } from 'lucide-react';
 
+const FAULT_TO_CASE_INDEX: Record<string, number> = {
+  case1: 0,
+  open_klixon: 0,
+  case2: 1,
+  ground_fault: 1,
+  case3: 2,
+  open_winding: 2,
+  case4: 3,
+  shorted_turns: 3,
+  case5: 4,
+  case6: 5,
+  bad_relay: 5,
+};
+
+const CASE_INDEX_TO_FAULT: WindingFaultType[] = [
+  'case1',
+  'case2',
+  'case3',
+  'case4',
+  'case5',
+  'case6',
+];
+
 export default function App() {
   // Theme state: dark (default #0a0a0c) or light (#f1f5f9)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -431,6 +454,8 @@ export default function App() {
                   rMarcha={rMarchaInput}
                   rArranque={rArranqueInput}
                   rTotal={rTotalInput}
+                  orientation={bornesOrientation}
+                  onToggleOrientation={() => setBornesOrientation(bornesOrientation === 'apexDown' ? 'apexUp' : 'apexDown')}
                 />
               )}
 
@@ -846,22 +871,28 @@ export default function App() {
                       <div className="flex items-center justify-between gap-1.5 p-1 rounded-lg bg-slate-100 dark:bg-[#0a0d16] border border-slate-200 dark:border-slate-800 shrink-0">
                         <button
                           type="button"
-                          onClick={() => setAveriasSubTab('electricas')}
-                          className="flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-amber-400 text-black shadow-sm"
-                        >
-                          <Wrench className="w-3.5 h-3.5" />
-                          <span>1. Averías Eléctricas (Bobinados)</span>
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => setAveriasSubTab('mecanico')}
                           className="flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
                         >
                           <Gauge className="w-3.5 h-3.5" />
-                          <span>2. Válvulas Flapper y Compresión</span>
+                          <span>1. Válvulas Flapper y Compresión</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAveriasSubTab('electricas')}
+                          className="flex-1 py-1.5 px-2 rounded-md font-mono text-tiny font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-amber-400 text-black shadow-sm"
+                        >
+                          <Wrench className="w-3.5 h-3.5" />
+                          <span>2. Averías Eléctricas (Bobinados)</span>
                         </button>
                       </div>
-                      <QuickTroubleshootingGuide />
+                      <QuickTroubleshootingGuide
+                        selectedCaseIndex={FAULT_TO_CASE_INDEX[selectedFault] ?? 0}
+                        onSelectCase={(idx) => {
+                          const fault = CASE_INDEX_TO_FAULT[idx] || 'case1';
+                          setSelectedFault(fault);
+                        }}
+                      />
                     </div>
                   ) : (
                     <MechanicalCompressionControlsPanel

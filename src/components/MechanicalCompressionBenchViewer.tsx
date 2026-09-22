@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UseMechanicalCompressionSimulatorReturn } from '../hooks/useMechanicalCompressionSimulator';
+import { ZoomPanViewer } from './ZoomPanViewer';
+import { FingerSealingIllustration } from './FingerSealingIllustration';
 import {
   Gauge,
   AlertTriangle,
@@ -9,8 +11,11 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Activity
+  Activity,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
+import { startCompressorHum, stopCompressorHum } from '../utils/audio';
 
 interface MechanicalCompressionBenchViewerProps {
   simulator: UseMechanicalCompressionSimulatorReturn;
@@ -19,6 +24,8 @@ interface MechanicalCompressionBenchViewerProps {
 export const MechanicalCompressionBenchViewer: React.FC<MechanicalCompressionBenchViewerProps> = ({
   simulator,
 }) => {
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+
   const {
     currentPsi,
     currentBar,
@@ -32,6 +39,15 @@ export const MechanicalCompressionBenchViewer: React.FC<MechanicalCompressionBen
     verdict,
     activeCaseInfo,
   } = simulator;
+
+  // Sync sound with compression state and user mute toggle
+  React.useEffect(() => {
+    if (isCompressing && soundEnabled) {
+      startCompressorHum(0.055, true);
+    } else {
+      stopCompressorHum();
+    }
+  }, [isCompressing, soundEnabled]);
 
   const pressureDrop = initialRetentionPsi > 0 ? Math.max(0, initialRetentionPsi - currentPsi) : 0;
   const initialRetentionBar = Math.round(initialRetentionPsi * 0.0689476 * 10) / 10;
@@ -86,30 +102,46 @@ export const MechanicalCompressionBenchViewer: React.FC<MechanicalCompressionBen
           </div>
         </div>
 
-        {/* Method selector buttons */}
-        <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono">
+        {/* Audio Toggle and Method selector buttons */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setMethodType('gauge')}
-            className={`px-2 py-1 rounded transition-colors cursor-pointer font-semibold ${
-              methodType === 'gauge'
-                ? 'bg-amber-400 text-black shadow-sm font-bold'
-                : 'text-slate-400 hover:text-white'
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`px-2 py-1 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              soundEnabled
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
+                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
             }`}
+            title={soundEnabled ? 'Silenciar sonido motor compresor' : 'Activar sonido motor compresor'}
           >
-            Manómetro de Alta
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-400" /> : <VolumeX className="w-3.5 h-3.5 text-slate-500" />}
+            <span className="hidden sm:inline">{soundEnabled ? 'Sonido ON' : 'Mute'}</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setMethodType('finger')}
-            className={`px-2 py-1 rounded transition-colors cursor-pointer font-semibold ${
-              methodType === 'finger'
-                ? 'bg-amber-400 text-black shadow-sm font-bold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Tapar con el Dedo
-          </button>
+
+          <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono">
+            <button
+              type="button"
+              onClick={() => setMethodType('gauge')}
+              className={`px-2 py-1 rounded transition-colors cursor-pointer font-semibold ${
+                methodType === 'gauge'
+                  ? 'bg-amber-400 text-black shadow-sm font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Manómetro de Alta
+            </button>
+            <button
+              type="button"
+              onClick={() => setMethodType('finger')}
+              className={`px-2 py-1 rounded transition-colors cursor-pointer font-semibold ${
+                methodType === 'finger'
+                  ? 'bg-amber-400 text-black shadow-sm font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Tapar con el Dedo
+            </button>
+          </div>
         </div>
       </div>
 
@@ -279,86 +311,275 @@ export const MechanicalCompressionBenchViewer: React.FC<MechanicalCompressionBen
 
         {/* Right (6 cols): Bench & Compressor Physical Representation */}
         <div className="md:col-span-6 flex flex-col justify-center space-y-2">
-          {/* Compressor Body Graphical SVG */}
-          <div className="relative p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col items-center justify-center min-h-[140px]">
-            <svg viewBox="0 0 240 120" className="w-full max-w-[230px] h-auto">
+          {/* Compressor Body Graphical SVG with Zoom & Pan */}
+          <div className="relative rounded-xl bg-slate-950 border border-slate-800 flex flex-col overflow-hidden shadow-inner">
+            <div className="relative w-full h-[240px] sm:h-[270px] overflow-hidden bg-slate-950">
+              <ZoomPanViewer
+                className="w-full h-full relative"
+                containerClassName="w-full h-full relative flex items-center justify-center p-2"
+                initialZoom={1}
+                minZoom={0.75}
+                maxZoom={3.5}
+                toolbarPosition="top-right"
+                title="Compresor hermético y tomas de alta/baja presión"
+              >
+                <div className="w-full h-full flex items-center justify-center select-none">
+                  <svg viewBox="0 -70 650 550" className="w-full max-w-[340px] h-auto drop-shadow-2xl">
               <defs>
-                <linearGradient id="compGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#334155" />
-                  <stop offset="50%" stopColor="#1e293b" />
-                  <stop offset="100%" stopColor="#0f172a" />
+                {/* Filtros de sombra y profundidad */}
+                <filter id="floorShadow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="12" />
+                </filter>
+                <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                <filter id="innerDepth" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="4" result="blur"/>
+                  <feOffset dx="0" dy="3"/>
+                  <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowDiff"/>
+                  <feFlood floodColor="#000000" floodOpacity="0.8"/>
+                  <feComposite in2="shadowDiff" operator="in"/>
+                  <feComposite in2="SourceGraphic" operator="over"/>
+                </filter>
+
+                {/* Gradientes Carcasa Pintura Epoxi Negra / Charcoal Premium */}
+                <radialGradient id="body3D" cx="45%" cy="30%" r="65%">
+                  <stop offset="0%" stopColor="#374151" />
+                  <stop offset="35%" stopColor="#1f2937" />
+                  <stop offset="70%" stopColor="#111827" />
+                  <stop offset="100%" stopColor="#030712" />
+                </radialGradient>
+
+                <linearGradient id="metalSpec" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="0.02" />
+                  <stop offset="30%" stopColor="#ffffff" stopOpacity="0.18" />
+                  <stop offset="50%" stopColor="#ffffff" stopOpacity="0.05" />
+                  <stop offset="100%" stopColor="#000000" stopOpacity="0.4" />
                 </linearGradient>
-                <linearGradient id="metalPipe" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#94a3b8" />
-                  <stop offset="50%" stopColor="#e2e8f0" />
-                  <stop offset="100%" stopColor="#64748b" />
+
+                {/* Gradientes Cobre / Bronce Realistas */}
+                <linearGradient id="copperPipe" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#b45309" />
+                  <stop offset="25%" stopColor="#d97706" />
+                  <stop offset="50%" stopColor="#fef3c7" />
+                  <stop offset="75%" stopColor="#b45309" />
+                  <stop offset="100%" stopColor="#78350f" />
+                </linearGradient>
+
+                <linearGradient id="copperPipeH" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#b45309" />
+                  <stop offset="30%" stopColor="#fef3c7" />
+                  <stop offset="70%" stopColor="#b45309" />
+                  <stop offset="100%" stopColor="#78350f" />
+                </linearGradient>
+
+                {/* Gradientes Acero y Goma */}
+                <linearGradient id="rubberFoot" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#1f2937" />
+                  <stop offset="50%" stopColor="#111827" />
+                  <stop offset="100%" stopColor="#030712" />
+                </linearGradient>
+                <linearGradient id="steelPlate" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#475569" />
+                  <stop offset="50%" stopColor="#94a3b8" />
+                  <stop offset="100%" stopColor="#334155" />
                 </linearGradient>
               </defs>
 
-              {/* Workbench surface */}
-              <rect x="10" y="105" width="220" height="8" rx="2" fill="#1e293b" stroke="#334155" />
+              {/* Sombra de apoyo proyectada en el suelo del banco */}
+              <ellipse cx="325" cy="440" rx="220" ry="24" fill="#000000" opacity="0.65" filter="url(#floorShadow)" />
 
-              {/* Rubber mounting feet */}
-              <rect x="40" y="96" width="20" height="9" rx="2" fill="#020617" stroke="#475569" />
-              <rect x="180" y="96" width="20" height="9" rx="2" fill="#020617" stroke="#475569" />
+              {/* Bancada de fijación inferior con silentblocks de caucho */}
+              <g id="mountingBase">
+                {/* Patas de anclaje de acero */}
+                <path d="M 145 390 L 165 425 L 235 425 L 245 390 Z" fill="url(#steelPlate)" stroke="#1e293b" strokeWidth="2" />
+                <path d="M 405 390 L 415 425 L 485 425 L 505 390 Z" fill="url(#steelPlate)" stroke="#1e293b" strokeWidth="2" />
 
-              {/* Hermetic Compressor Dome Body */}
-              <g className={isCompressing ? 'animate-[bounce_0.15s_infinite]' : ''}>
-                <rect x="45" y="30" width="150" height="68" rx="34" fill="url(#compGrad)" stroke="#475569" strokeWidth="2" />
-                {/* Horizontal welding seam */}
-                <line x1="46" y1="64" x2="194" y2="64" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 2" />
+                {/* Silentblocks de goma amortiguadora */}
+                <rect x="175" y="420" width="50" height="18" rx="5" fill="url(#rubberFoot)" stroke="#374151" strokeWidth="1.5" />
+                <circle cx="200" cy="429" r="5" fill="#64748b" stroke="#000" strokeWidth="1" />
 
-                {/* Electrical terminal housing cover */}
-                <rect x="85" y="70" width="30" height="20" rx="3" fill="#020617" stroke="#fbbf24" strokeWidth="1" />
-                <text x="100" y="83" fill="#fbbf24" fontSize="6" fontWeight="bold" textAnchor="middle" fontFamily="monospace">C R S</text>
+                <rect x="425" y="420" width="50" height="18" rx="5" fill="url(#rubberFoot)" stroke="#374151" strokeWidth="1.5" />
+                <circle cx="450" cy="429" r="5" fill="#64748b" stroke="#000" strokeWidth="1" />
+              </g>
 
-                {/* Suction Pipe (Aspiración - Tubo grueso) */}
-                <rect x="55" y="16" width="10" height="18" fill="url(#metalPipe)" stroke="#334155" />
-                <text x="60" y="12" fill="#94a3b8" fontSize="6" fontWeight="bold" textAnchor="middle">ASPIRACIÓN</text>
+              {/* Grupo animable del cuerpo del compresor (vibración mecánica contenida al comprimir) */}
+              <g className={isCompressing ? 'compressor-running-vibration' : ''}>
+                {/* Carcasa inferior semiesférica */}
+                <path
+                  d="M 170 230 C 170 370, 200 410, 325 410 C 450 410, 480 370, 480 230 Z"
+                  fill="url(#body3D)"
+                  stroke="#1f2937"
+                  strokeWidth="2"
+                />
 
-                {/* Service/Process Tube (Carga) */}
-                <rect x="175" y="16" width="10" height="18" fill="url(#metalPipe)" stroke="#334155" />
-                <text x="180" y="12" fill="#94a3b8" fontSize="6" fontWeight="bold" textAnchor="middle">SERVICIO</text>
+                {/* Domo superior semiesférico */}
+                <path
+                  d="M 170 230 C 170 120, 210 75, 325 75 C 440 75, 480 120, 480 230 Z"
+                  fill="url(#body3D)"
+                  stroke="#1f2937"
+                  strokeWidth="2"
+                />
 
-                {/* Discharge Pipe (Descarga / Alta - Tubo fino) */}
-                <rect x="130" y="10" width="7" height="24" fill="url(#metalPipe)" stroke="#ef4444" strokeWidth="1" />
-                <text x="133" y="6" fill="#f87171" fontSize="6.5" fontWeight="bold" textAnchor="middle">DESCARGA</text>
+                {/* Capa de reflejo especular metálico brillante */}
+                <path
+                  d="M 180 230 C 180 135, 215 90, 325 90 C 435 90, 470 135, 470 230 C 470 355, 435 395, 325 395 C 215 395, 180 355, 180 230 Z"
+                  fill="url(#metalSpec)"
+                />
 
-                {/* When method is GAUGE: Red high-pressure manifold hose connected */}
-                {methodType === 'gauge' && (
-                  <g>
-                    <path
-                      d="M 133 10 C 133 -10, 80 -10, 80 5"
-                      fill="none"
-                      stroke="#ef4444"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
+                {/* Cordón de soldadura circunferencial central reforzado */}
+                <g id="weldSeam">
+                  <ellipse cx="325" cy="230" rx="158" ry="14" fill="#0b0f19" stroke="#374151" strokeWidth="2" />
+                  <ellipse cx="325" cy="230" rx="155" ry="11" fill="none" stroke="#4b5563" strokeWidth="2.5" strokeDasharray="6 3" />
+                  <ellipse cx="325" cy="229" rx="154" ry="10" fill="none" stroke="#9ca3af" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
+                </g>
+
+                {/* Placa de características técnica metálica (Nameplate) */}
+                <g id="nameplate" transform="translate(240, 255)">
+                  <rect x="0" y="0" width="170" height="90" rx="6" fill="#0f172a" stroke="#64748b" strokeWidth="1.5" />
+                  <rect x="2" y="2" width="166" height="86" rx="4" fill="none" stroke="#334155" strokeWidth="1" />
+                  {/* Remaches de fijación */}
+                  <circle cx="8" cy="8" r="2.5" fill="#cbd5e1" stroke="#000" strokeWidth="0.5" />
+                  <circle cx="162" cy="8" r="2.5" fill="#cbd5e1" stroke="#000" strokeWidth="0.5" />
+                  <circle cx="8" cy="82" r="2.5" fill="#cbd5e1" stroke="#000" strokeWidth="0.5" />
+                  <circle cx="162" cy="82" r="2.5" fill="#cbd5e1" stroke="#000" strokeWidth="0.5" />
+
+                  {/* Textos de placa técnica */}
+                  <text x="85" y="19" fill="#38bdf8" fontSize="10.5" fontWeight="900" fontFamily="monospace" textAnchor="middle" letterSpacing="1">
+                    HERMETIC COMPRESSOR
+                  </text>
+                  <text x="12" y="36" fill="#94a3b8" fontSize="8" fontFamily="monospace">MOD: GL90TB • R134a / R600a</text>
+                  <text x="12" y="49" fill="#94a3b8" fontSize="8" fontFamily="monospace">VOLT: 220-240V ~ 50Hz 1PH</text>
+                  <text x="12" y="62" fill="#94a3b8" fontSize="8" fontFamily="monospace">LRA: 14.2A • THERMALLY PROT.</text>
+                  <text x="12" y="76" fill="#fbbf24" fontSize="8" fontWeight="bold" fontFamily="monospace">POE OIL 300cc • HIGH TORQUE</text>
+                </g>
+
+                {/* Caja de bornes eléctricos y conexión hermética (Fusite C-R-S) */}
+                <g id="terminalBox" transform="translate(140, 195)">
+                  {/* Soporte y carcasa de baquelita/plástico ignífugo */}
+                  <rect x="0" y="0" width="46" height="68" rx="6" fill="#030712" stroke="#475569" strokeWidth="2" filter="url(#innerDepth)" />
+                  <rect x="5" y="5" width="36" height="58" rx="4" fill="#0b0f19" stroke="#1f2937" strokeWidth="1" />
+
+                  {/* Bornes Fusite (Pasamuros de vidrio aislante sellado) */}
+                  {/* Común C */}
+                  <circle cx="23" cy="20" r="6" fill="#1e293b" stroke="#f59e0b" strokeWidth="2" />
+                  <circle cx="23" cy="20" r="2.5" fill="#fbbf24" />
+                  <text x="23" y="12" fill="#f59e0b" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="monospace">C</text>
+
+                  {/* Run / Marcha R */}
+                  <circle cx="14" cy="46" r="6" fill="#1e293b" stroke="#22c55e" strokeWidth="2" />
+                  <circle cx="14" cy="46" r="2.5" fill="#4ade80" />
+                  <text x="14" y="61" fill="#22c55e" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="monospace">R</text>
+
+                  {/* Start / Arranque S */}
+                  <circle cx="32" cy="46" r="6" fill="#1e293b" stroke="#38bdf8" strokeWidth="2" />
+                  <circle cx="32" cy="46" r="2.5" fill="#60a5fa" />
+                  <text x="32" y="61" fill="#38bdf8" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="monospace">S</text>
+                </g>
+
+                {/* ==================================================== */}
+                {/* TUBERÍAS DE COBRE REALISTAS (Aspiración, Servicio, Descarga) */}
+                {/* ==================================================== */}
+
+                {/* 1. Tubería de Aspiración / Retorno (Lado Izquierdo - Tubo Grueso 3/8") */}
+                <g id="suctionPipe">
+                  {/* Zona de unión / boquilla soldada a carcasa */}
+                  <path d="M 180 130 C 140 120, 100 130, 80 150" fill="none" stroke="#000000" strokeWidth="22" opacity="0.4" filter="url(#floorShadow)" />
+                  <path d="M 182 128 C 145 115, 105 125, 80 150" fill="none" stroke="url(#copperPipe)" strokeWidth="18" strokeLinecap="round" />
+                  <path d="M 182 128 C 145 115, 105 125, 80 150" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" opacity="0.4" />
+                  {/* Anillo de soldadura de plata */}
+                  <ellipse cx="178" cy="130" rx="4" ry="11" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
+                  {/* Boca de tubo abierta */}
+                  <ellipse cx="80" cy="150" rx="5" ry="9" fill="#451a03" stroke="#d97706" strokeWidth="1.5" />
+                  <text x="75" y="175" fill="#94a3b8" fontSize="9" fontWeight="bold" fontFamily="monospace" textAnchor="middle">ASPIRACIÓN</text>
+                  <text x="75" y="186" fill="#64748b" fontSize="7.5" fontFamily="monospace" textAnchor="middle">(3/8" Baja)</text>
+                </g>
+
+                {/* 2. Tubería de Servicio / Proceso (Lado Derecho - Carga de Gas 1/4") */}
+                <g id="servicePipe">
+                  <path d="M 465 145 C 505 135, 545 145, 570 170" fill="none" stroke="url(#copperPipe)" strokeWidth="14" strokeLinecap="round" />
+                  <path d="M 465 145 C 505 135, 545 145, 570 170" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+                  {/* Anillo de soldadura */}
+                  <ellipse cx="468" cy="146" rx="3.5" ry="8.5" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
+                  {/* Extremo cerrado o con válvula de obús */}
+                  <ellipse cx="570" cy="170" rx="4" ry="7" fill="#451a03" stroke="#d97706" strokeWidth="1" />
+                  <text x="575" y="195" fill="#94a3b8" fontSize="9" fontWeight="bold" fontFamily="monospace" textAnchor="middle">SERVICIO</text>
+                  <text x="575" y="206" fill="#64748b" fontSize="7.5" fontFamily="monospace" textAnchor="middle">(1/4" Carga)</text>
+                </g>
+
+                {/* 3. Tubería de Descarga / Alta Presión (Superior - Tubo Fino 1/4" / 5/16" para prueba) */}
+                <g id="dischargePipe">
+                  {/* Cuello de salida vertical */}
+                  <path d="M 370 85 L 370 30" fill="none" stroke="url(#copperPipe)" strokeWidth="13" strokeLinecap="square" />
+                  <path d="M 368 85 L 368 30" fill="none" stroke="#ffffff" strokeWidth="2" opacity="0.5" />
+                  {/* Anillo de unión soldada a carcasa */}
+                  <ellipse cx="370" cy="85" rx="9" ry="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
+
+                  {/* Codo o boca de salida */}
+                  <ellipse cx="370" cy="30" rx="6.5" ry="3.5" fill="#451a03" stroke="#f59e0b" strokeWidth="1.5" />
+
+                  {/* Cartela / Etiqueta de Descarga */}
+                  <g transform="translate(390, 32)">
+                    <rect x="0" y="0" width="85" height="24" rx="4" fill="#7f1d1d" stroke="#ef4444" strokeWidth="1.2" />
+                    <text x="42.5" y="13" fill="#fca5a5" fontSize="8.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">DESCARGA</text>
+                    <text x="42.5" y="21" fill="#fecaca" fontSize="7" fontFamily="monospace" textAnchor="middle">(ALTA PRESIÓN)</text>
+                  </g>
+
+                  {/* CASO A: MÉTODO MANÓMETRO (Latiguillo rojo reforzado de alta presión conectado) */}
+                  {methodType === 'gauge' && (
+                    <g id="manifoldHoseAttachment">
+                      {/* Acoplador rápido de latón moleteado */}
+                      <rect x="362" y="20" width="16" height="15" rx="2" fill="#d97706" stroke="#fef08a" strokeWidth="1.5" />
+                      <line x1="363" y1="25" x2="377" y2="25" stroke="#78350f" strokeWidth="1.5" />
+                      <line x1="363" y1="30" x2="377" y2="30" stroke="#78350f" strokeWidth="1.5" />
+
+                      {/* Manguera roja de 800 PSI con curva hacia el manómetro */}
+                      <path
+                        d="M 370 20 C 370 -20, 260 -30, 200 -10"
+                        fill="none"
+                        stroke="#dc2626"
+                        strokeWidth="10"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M 370 20 C 370 -20, 260 -30, 200 -10"
+                        fill="none"
+                        stroke="#fca5a5"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        opacity="0.6"
+                      />
+                    </g>
+                  )}
+
+                  {/* CASO B: MÉTODO TAPAR CON EL DEDO (Dedo índice realista presionando firmemente la descarga) */}
+                  {methodType === 'finger' && (
+                    <FingerSealingIllustration
+                      currentPsi={currentPsi}
+                      isCompressing={isCompressing}
+                      isMeasuringRetention={isMeasuringRetention}
+                      verdict={verdict}
                     />
-                    <circle cx="133" cy="10" r="4" fill="#fbbf24" stroke="#000" strokeWidth="0.8" />
-                  </g>
-                )}
+                  )}
 
-                {/* When method is FINGER: Hand icon/finger pressing on pipe */}
-                {methodType === 'finger' && (
-                  <g transform="translate(125, -2)">
-                    {/* Finger block */}
-                    <rect x="0" y="0" width="16" height="14" rx="5" fill="#fca5a5" stroke="#b91c1c" strokeWidth="1" />
-                    <text x="8" y="9" fill="#991b1b" fontSize="6" fontWeight="bold" textAnchor="middle">DEDO</text>
-                  </g>
-                )}
-
-                {/* Pumping action gas or pressure bubbles */}
-                {isCompressing && (
-                  <g className="animate-pulse">
-                    <circle cx="133" cy="18" r="3" fill="#ef4444" opacity="0.8" />
-                    <circle cx="133" cy="22" r="2" fill="#facc15" opacity="0.9" />
-                  </g>
-                )}
+                  {/* Efecto de gas a presión / burbujas de proyección al comprimir en método manómetro */}
+                  {methodType === 'gauge' && isCompressing && (
+                    <g id="compressionGasEffects" className="animate-pulse">
+                      <circle cx="370" cy="18" r="6" fill="#ef4444" opacity="0.7" />
+                      <circle cx="370" cy="8" r="4.5" fill="#fbbf24" opacity="0.9" />
+                      <circle cx="370" cy="-2" r="3" fill="#ffffff" opacity="0.8" />
+                    </g>
+                  )}
+                </g>
               </g>
             </svg>
+                </div>
+              </ZoomPanViewer>
+            </div>
 
             {/* Test Status Banner inside illustration */}
-            <div className="w-full flex items-center justify-between text-[10.5px] font-mono mt-1 pt-1.5 border-t border-slate-800">
+            <div className="w-full flex items-center justify-between text-[10.5px] font-mono px-3 py-1.5 bg-slate-950/95 border-t border-slate-800 shrink-0 z-10">
               <span className="text-slate-400">Estado de Motor:</span>
               <span className={`font-bold px-1.5 py-0.5 rounded ${
                 isCompressing

@@ -388,3 +388,30 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.6);
 }
+
+/* Vibración mecánica realista y contenida para compresor hermético sobre silentblocks */
+@keyframes compressorSubtleVibration {
+  0% {
+    transform: translate(0px, 0px);
+  }
+  20% {
+    transform: translate(-0.5px, 0.4px);
+  }
+  40% {
+    transform: translate(0.4px, -0.5px);
+  }
+  60% {
+    transform: translate(-0.3px, -0.3px);
+  }
+  80% {
+    transform: translate(0.5px, 0.3px);
+  }
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
+
+.compressor-running-vibration {
+  animation: compressorSubtleVibration 0.08s infinite linear;
+  will-change: transform;
+}

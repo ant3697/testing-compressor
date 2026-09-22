@@ -48,7 +48,7 @@ export interface StartingSystemInfo {
   sistemaExpansion: 'Capilar' | 'Válvula de expansión (TXV)';
   componentes: string[];
   descripcionFuncionamiento: string;
-  releTipo: 'Relé de Corriente (Amperimétrico)' | 'Ninguno' | 'Relé de Tensión (Voltimétrico)';
+  releTipo: 'Relé de Intensidad' | 'Relé de Corriente (Amperimétrico)' | 'Ninguno' | 'Relé de Tensión (Voltimétrico)';
   condensador: 'Ninguno' | 'Condensador de Marcha Permanente' | 'Condensador Electrolítico de Arranque' | 'Condensador de Arranque + Condensador de Marcha';
   klixon: boolean;
 }

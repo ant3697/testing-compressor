@@ -116,6 +116,7 @@ export const StartingSystemSchematicViewer: React.FC<StartingSystemSchematicView
       {/* 3. Main Center Display: ZoomPanViewer hosting the Schematic */}
       <div className="relative w-full flex-1 min-h-[350px] flex flex-col items-center justify-center bg-slate-50 dark:bg-[#070b14] rounded-lg border border-slate-200 dark:border-slate-800/80 p-2 overflow-hidden">
         <ZoomPanViewer
+          key={`starting-schematic-${selectedCircuit}`}
           className="w-full h-full min-h-[350px] rounded-lg relative"
           containerClassName="w-full h-full relative flex items-center justify-center"
           initialZoom={1}
@@ -135,24 +136,28 @@ export const StartingSystemSchematicViewer: React.FC<StartingSystemSchematicView
       </div>
 
       {/* 4. Bottom Component Legend Strip */}
-      <div className="pt-2 flex items-center justify-between text-tiny font-mono text-slate-500 dark:text-slate-400 shrink-0">
-        <div className="flex items-center gap-2 overflow-x-auto text-[11px]">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>R: Marcha</span>
+      <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-tiny font-mono text-slate-500 dark:text-slate-400 shrink-0">
+        <div className="flex items-center gap-3 overflow-x-auto text-[11px]">
+          <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20"></span>
+            <span>Verde: Marcha / Bobina relé activa</span>
           </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            <span>S: Arranque</span>
+          <span className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-500">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/20"></span>
+            <span>Naranja/Oro: Relé cerrado, PTC o Cond. Arranque en carga</span>
           </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-sky-500"></span>
-            <span>C: Común (Klixon)</span>
+          <span className="flex items-center gap-1.5 font-semibold text-sky-600 dark:text-sky-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 ring-2 ring-sky-500/20"></span>
+            <span>Azul: Cond. Marcha permanente en carga</span>
+          </span>
+          <span className="flex items-center gap-1.5 font-semibold text-slate-500 dark:text-slate-400 border-l border-slate-300 dark:border-slate-700 pl-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+            <span>Gris: Inactivo / Desconectado</span>
           </span>
         </div>
 
-        <span className="text-[11px] hidden sm:inline text-slate-400">
-          Usa zoom/paneo para ampliar detalles
+        <span className="text-[11px] hidden lg:inline text-slate-400">
+          Líneas iluminadas con badge = componente en carga o actuando
         </span>
       </div>
     </div>

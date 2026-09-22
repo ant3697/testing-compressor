@@ -277,7 +277,7 @@ export const OfficialHSTSchematicSheet: React.FC = () => {
 
               <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                 <span className="text-blue-600 dark:text-blue-400 font-bold">+ Condensador Marcha</span>
-                <span className="text-red-600 dark:text-red-400 font-bold">Relé Amperimétrico</span>
+                <span className="text-red-600 dark:text-red-400 font-bold">Relé de Intensidad</span>
               </div>
             </div>
 

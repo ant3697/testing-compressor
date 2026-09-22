@@ -116,10 +116,12 @@ export const ZoomPanViewer: React.FC<ZoomPanViewerProps> = ({
 
   // Pointer Down for panning
   const handlePointerDown = (e: React.PointerEvent) => {
-    // If clicking on an interactive control (button, input, select, etc.) and panModeLocked is not on,
-    // don't start pan drag so button click works seamlessly!
-    const target = e.target as HTMLElement;
-    const isInteractive = target.closest('button, a, input, select, textarea, [role="button"]');
+    // If clicking on an interactive control (button, input, select, probe handles, clickable bornes, etc.)
+    // and panModeLocked is not explicitly active, don't start pan drag so interaction works seamlessly!
+    const target = e.target as HTMLElement | SVGElement;
+    const isInteractive = target.closest?.(
+      'button, a, input, select, textarea, [role="button"], [data-interactive="true"], .cursor-pointer, [cursor="pointer"]'
+    );
     if (isInteractive && !panModeLocked) {
       return;
     }

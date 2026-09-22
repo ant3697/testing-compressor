@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Play, AlertTriangle, RefreshCw, Zap, CheckCircle2, Info, ChevronLeft, ChevronRight, Activity, Cable } from 'lucide-react';
 import { IntuitiveSchematicDiagram, SchematicVariant } from './IntuitiveSchematicDiagram';
 import { RealCompressorWiringSimulation } from './RealCompressorWiringSimulation';
+import { ZoomPanViewer } from './ZoomPanViewer';
 
 interface StartingSystemModalProps {
   isOpen: boolean;
@@ -30,8 +31,8 @@ interface VariantDetail {
 const VARIANT_DETAILS: Record<SchematicVariant, VariantDetail> = {
   RSIR_RELE: {
     id: 'RSIR_RELE',
-    name: 'RSIR con Relé de Arranque Amperimétrico',
-    shortName: 'RSIR (Relé)',
+    name: 'RSIR con Relé de Intensidad',
+    shortName: 'RSIR (Relé Int.)',
     category: 'LST (Bajo Par)',
     subCategory: 'Resistant Start Induction Run',
     expansionType: 'Tubo Capilar (Presiones equilibradas en parada)',
@@ -513,14 +514,40 @@ export const StartingSystemModal: React.FC<StartingSystemModalProps> = ({
                 </div>
               </div>
 
-              {/* The SVG Schematic Diagram in Maximized size */}
-              <div className="w-full max-w-3xl mx-auto flex items-center justify-center">
-                <IntuitiveSchematicDiagram variant={currentVariant} simState={simState} />
+              {/* The SVG Schematic Diagram with Zoom / Pan */}
+              <div className="w-full h-[380px] sm:h-[440px] relative rounded-xl overflow-hidden bg-slate-900/60 border border-slate-800 flex items-center justify-center">
+                <ZoomPanViewer
+                  key={`modal-schematic-${currentVariant}`}
+                  className="w-full h-full flex items-center justify-center"
+                  containerClassName="w-full h-full flex items-center justify-center p-2"
+                  initialZoom={1}
+                  minZoom={0.8}
+                  maxZoom={3.5}
+                  toolbarPosition="top-right"
+                  title={`Esquema: ${currentDetails.name}`}
+                >
+                  <div className="w-full max-w-3xl mx-auto flex items-center justify-center">
+                    <IntuitiveSchematicDiagram variant={currentVariant} simState={simState} />
+                  </div>
+                </ZoomPanViewer>
               </div>
             </div>
           ) : (
-            <div className="bg-slate-950 p-4 sm:p-6 rounded-2xl border-2 border-slate-800 relative">
-              <RealCompressorWiringSimulation variant={currentVariant} simState={simState} />
+            <div className="w-full h-[380px] sm:h-[440px] relative rounded-2xl border-2 border-slate-800 overflow-hidden bg-slate-950 flex items-center justify-center">
+              <ZoomPanViewer
+                key={`modal-wiring-${currentVariant}`}
+                className="w-full h-full flex items-center justify-center"
+                containerClassName="w-full h-full flex items-center justify-center p-2"
+                initialZoom={1}
+                minZoom={0.8}
+                maxZoom={3.5}
+                toolbarPosition="top-right"
+                title={`Conexión física en bornes: ${currentDetails.name}`}
+              >
+                <div className="w-full max-w-3xl mx-auto flex items-center justify-center p-4">
+                  <RealCompressorWiringSimulation variant={currentVariant} simState={simState} />
+                </div>
+              </ZoomPanViewer>
             </div>
           )}
 

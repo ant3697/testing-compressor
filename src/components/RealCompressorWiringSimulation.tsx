@@ -106,7 +106,7 @@ export const RealCompressorWiringSimulation: React.FC<RealCompressorWiringProps>
             Carcasa Compresor Hermético (Vista Frontal Bornas)
           </span>
           <span className="text-amber-400 font-bold">
-            Configuración: {isRelay ? 'Relé Amperimétrico' : isPTC ? 'Pastilla PTC' : 'Relé Voltimétrico'}
+            Configuración: {isRelay ? 'Relé de Intensidad' : isPTC ? 'Pastilla PTC' : 'Relé Voltimétrico'}
           </span>
         </div>
 
@@ -220,7 +220,7 @@ export const RealCompressorWiringSimulation: React.FC<RealCompressorWiringProps>
           <g id="hardware-starter">
             <rect x="440" y="180" width="220" height="60" rx="8" fill="#1e293b" stroke="#475569" strokeWidth="2" />
             <text x="455" y="202" fill="#f8fafc" fontSize="12" fontWeight="bold">
-              {isRelay ? 'Relé de Arranque Amperimétrico' : isPTC ? 'Dispositivo de Arranque PTC' : 'Relé Voltimétrico Potencial'}
+              {isRelay ? 'Relé de Arranque de Intensidad' : isPTC ? 'Dispositivo de Arranque PTC' : 'Relé Voltimétrico Potencial'}
             </text>
             <text x="455" y="222" fill="#94a3b8" fontSize="10">
               {isRelay

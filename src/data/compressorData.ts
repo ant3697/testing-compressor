@@ -148,7 +148,7 @@ export const STARTING_SYSTEMS: StartingSystemInfo[] = [
     ],
     descripcionFuncionamiento:
       'Para sistemas donde las presiones de alta y baja se igualan durante la parada (tubo capilar). En el momento de conexión, la alta corriente inicial por el devanado de marcha activa la bobina del relé de intensidad (R. Int), cerrando su contacto y alimentando el devanado de arranque. Al ganar velocidad el rotor, la corriente disminuye, la bobina del relé deja caer el contacto y el devanado de arranque se desconecta.',
-    releTipo: 'Relé de Corriente (Amperimétrico)',
+    releTipo: 'Relé de Intensidad',
     condensador: 'Ninguno',
     klixon: true,
   },
@@ -185,7 +185,7 @@ export const STARTING_SYSTEMS: StartingSystemInfo[] = [
     ],
     descripcionFuncionamiento:
       'Diseñado para sistemas donde no se igualan las presiones en parada (válvula de expansión termostática) y el compresor debe arrancar contra contrapresión. Un condensador electrolítico en serie con el contacto del relé de corriente desfasa la corriente 90°, generando un par motor muy elevado. Al alcanzar ~75% de velocidad, el relé de corriente desconecta el condensador y el devanado de arranque.',
-    releTipo: 'Relé de Corriente (Amperimétrico)',
+    releTipo: 'Relé de Intensidad',
     condensador: 'Condensador Electrolítico de Arranque',
     klixon: true,
   },

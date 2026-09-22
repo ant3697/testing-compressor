@@ -32,7 +32,7 @@ const ALL_CIRCUITS: CircuitCardData[] = [
     name: 'CSR con Relé de Arranque',
     category: 'HST',
     condensador: 'Cond. Electrolítico de Arranque',
-    desconexion: 'Relé Amperimétrico (caída por gravedad)',
+    desconexion: 'Relé de Intensidad (caída por gravedad)',
     par: 'Alto Par (HST)',
     detalles: 'El condensador de arranque genera un desfase de 90° para alto par. Al acelerar, la corriente de la bobina de marcha desciende y el contacto del relé abre desconectando el condensador.',
     aplicaciones: 'Compresores comerciales con capilar sin despresurizar o válvulas de expansión.',
@@ -77,7 +77,7 @@ const ALL_CIRCUITS: CircuitCardData[] = [
     name: 'RSIR con Relé de Intensidad',
     category: 'LST',
     condensador: 'Sin Condensador',
-    desconexion: 'Relé Amperimétrico electromecánico',
+    desconexion: 'Relé de Intensidad electromecánico',
     par: 'Bajo Par (LST)',
     detalles: 'El desfase se logra por la diferencia de inductancia y resistencia entre hilos (marcha hilo grueso, arranque hilo fino). Tras el arranque el relé abre.',
     aplicaciones: 'Neveras domésticas y arcones pequeños con tubo capilar que ecualiza presiones.',
@@ -153,17 +153,6 @@ export const StartingSystemsControlsPanel: React.FC<StartingSystemsControlsPanel
         <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 dark:bg-[#0a0d16] border border-slate-200 dark:border-slate-800 text-tiny font-mono shrink-0">
           <button
             type="button"
-            onClick={() => setActiveCategory('HST')}
-            className={`px-2.5 py-1 rounded transition-all cursor-pointer font-bold ${
-              activeCategory === 'HST'
-                ? 'bg-amber-400 text-black shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            HST (Alto Par)
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveCategory('LST')}
             className={`px-2.5 py-1 rounded transition-all cursor-pointer font-bold ${
               activeCategory === 'LST'
@@ -172,6 +161,17 @@ export const StartingSystemsControlsPanel: React.FC<StartingSystemsControlsPanel
             }`}
           >
             LST (Bajo Par)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveCategory('HST')}
+            className={`px-2.5 py-1 rounded transition-all cursor-pointer font-bold ${
+              activeCategory === 'HST'
+                ? 'bg-amber-400 text-black shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            HST (Alto Par)
           </button>
           <button
             type="button"
@@ -272,7 +272,7 @@ export const StartingSystemsControlsPanel: React.FC<StartingSystemsControlsPanel
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0a0d16] border border-slate-200 dark:border-slate-800 space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
               <Zap className="w-3.5 h-3.5 text-blue-500" />
-              <span>Relé Amperimétrico</span>
+              <span>Relé de Intensidad</span>
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
               Bobina en serie con el borne <strong>R (Marcha)</strong>. El pico de corriente de arranque levanta el émbolo cerrando el contacto hacia <strong>S</strong>; al caer la corriente cae por gravedad.

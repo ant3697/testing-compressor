@@ -1560,7 +1560,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
                     El motor venció la inercia, alcanzó velocidad nominal (~2.850 RPM) y la corriente cayó al valor nominal <strong className="font-mono text-emerald-600 dark:text-emerald-400">{currentAmps.toFixed(1)} A (FLA)</strong>.
                   </p>
                   <div className="pt-1.5 border-t border-emerald-500/20 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
-                    💡 Diagnóstico: El compresor está en perfecto estado. Si no arrancaba en el equipo, sustituye el relé amperimétrico o el termistor PTC.
+                    💡 Diagnóstico: El compresor está en perfecto estado. Si no arrancaba en el equipo, sustituye el relé de intensidad o el termistor PTC.
                   </div>
                 </div>
               ) : powerOn ? (
