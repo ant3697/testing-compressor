@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ZoomPanViewer } from './ZoomPanViewer';
 import { AlertTriangle, CheckCircle2, Zap, HelpCircle, ShieldAlert, Volume2, RotateCw } from 'lucide-react';
 import { KlixonModal } from './KlixonModal';
-import { playFaultAcousticSound } from '../utils/audio';
+import { playFaultAcousticSound, playCase1LockedRotorSound, stopCase1LockedRotorSound } from '../utils/audio';
 import { CompressorChassisTerminals } from './CompressorChassisTerminals';
 import { KlixonTestSvg } from './KlixonTestSvg';
 import { AmperometricRelayTestSvg } from './AmperometricRelayTestSvg';
+import { DifferentialSwitchSvg } from './DifferentialSwitchSvg';
+import { Case2ConnectedCircuitSvg } from './Case2ConnectedCircuitSvg';
 
 export type WindingFaultType =
   | 'case1'
@@ -166,10 +168,59 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
   const [internalFault] = useState<WindingFaultType>(selectedFault);
   const [internalOrientation, setInternalOrientation] = useState<'apexDown' | 'apexUp'>('apexDown');
   const [isKlixonModalOpen, setIsKlixonModalOpen] = useState<boolean>(false);
+  const [case1AudioPhase, setCase1AudioPhase] = useState<'idle' | 'buzzing' | 'clicked'>('idle');
+  const [diffTripped, setDiffTripped] = useState<boolean>(true);
 
   const activeFault = onSelectFault ? selectedFault : internalFault;
   const currentOrientation = orientation || internalOrientation;
   const handleToggleOrientation = onToggleOrientation || (() => setInternalOrientation(prev => prev === 'apexDown' ? 'apexUp' : 'apexDown'));
+
+  const isGroundFaultCase = activeFault === 'case2' || activeFault === 'ground_fault';
+
+  useEffect(() => {
+    stopCase1LockedRotorSound();
+    setCase1AudioPhase('idle');
+    if (isGroundFaultCase) {
+      setDiffTripped(true);
+    }
+  }, [activeFault, isGroundFaultCase]);
+
+  const handleToggleDiff = () => {
+    if (diffTripped) {
+      // Intentar rearmar el diferencial con derivación a masa:
+      // Sube a I·ON fugazmente pero la fuga >30mA lo dispara de inmediato a 0·OFF con arco
+      setDiffTripped(false);
+      playFaultAcousticSound('ground_fault');
+      setTimeout(() => {
+        setDiffTripped(true);
+      }, 160);
+    } else {
+      setDiffTripped(true);
+      playFaultAcousticSound('ground_fault');
+    }
+  };
+
+  const handlePlayAudio = () => {
+    if (activeFault === 'case1' || activeFault === 'open_klixon') {
+      if (case1AudioPhase !== 'idle') {
+        stopCase1LockedRotorSound();
+        setCase1AudioPhase('idle');
+      } else {
+        playCase1LockedRotorSound((phase) => {
+          setCase1AudioPhase(phase);
+        });
+      }
+    } else if (isGroundFaultCase) {
+      // Disparo de diferencial con arco eléctrico y golpe mecánico de palanca
+      setDiffTripped(false);
+      playFaultAcousticSound('ground_fault');
+      setTimeout(() => {
+        setDiffTripped(true);
+      }, 140);
+    } else {
+      playFaultAcousticSound(activeFault);
+    }
+  };
 
   const faultInfo = FAULT_DETAILS[activeFault] || FAULT_DETAILS.case2;
 
@@ -205,12 +256,26 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
 
           <button
             type="button"
-            onClick={() => playFaultAcousticSound(activeFault)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition-colors cursor-pointer"
-            title="Escuchar audio acústico de la avería"
+            onClick={handlePlayAudio}
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono font-bold transition-all cursor-pointer ${
+              case1AudioPhase === 'buzzing'
+                ? 'bg-red-500 text-white animate-pulse shadow-md ring-2 ring-red-400'
+                : case1AudioPhase === 'clicked'
+                ? 'bg-amber-400 text-black shadow-md'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30'
+            }`}
+            title="Escuchar audio acústico: zumbido de 3 segundos y 'clic' del Klixon"
           >
-            <Volume2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Audio</span>
+            <Volume2 className={`w-3.5 h-3.5 ${case1AudioPhase === 'buzzing' ? 'animate-bounce' : ''}`} />
+            <span>
+              {case1AudioPhase === 'buzzing'
+                ? 'Zumbando 3s...'
+                : case1AudioPhase === 'clicked'
+                ? '¡Clic Klixon!'
+                : activeFault === 'case1'
+                ? 'Audio (3s + Clic)'
+                : 'Audio'}
+            </span>
           </button>
         </div>
       </div>
@@ -250,6 +315,31 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
               <AmperometricRelayTestSvg className="w-full max-w-[540px]" />
             </div>
           </ZoomPanViewer>
+        ) : isGroundFaultCase ? (
+          <ZoomPanViewer
+            key={`case2-circuit-${currentOrientation}`}
+            className="w-full h-full min-h-[350px] rounded-lg relative"
+            containerClassName="w-full h-full relative flex items-center justify-center"
+            initialZoom={0.92}
+            minZoom={0.5}
+            maxZoom={3.5}
+            toolbarPosition="top-right"
+            title="Circuito Interconectado: Interruptor Diferencial y Compresor con Fuga a Masa"
+          >
+            <div className="w-full h-full flex items-center justify-center p-1 select-none">
+              <Case2ConnectedCircuitSvg
+                orientation={currentOrientation}
+                rMarcha={rMarcha}
+                rArranque={rArranque}
+                rTotal={rTotal}
+                isTripped={diffTripped}
+                onToggleTripped={handleToggleDiff}
+                onKlixonClick={() => setIsKlixonModalOpen(true)}
+                onTriggerAudio={handlePlayAudio}
+                className="w-full max-w-[780px]"
+              />
+            </div>
+          </ZoomPanViewer>
         ) : (
           <ZoomPanViewer
             key={`terminals-viewer-${activeFault}-${currentOrientation}`}
@@ -270,6 +360,8 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
                 rTotal={rTotal}
                 onKlixonClick={() => setIsKlixonModalOpen(true)}
                 className="w-full max-w-[360px]"
+                case1AudioPhase={case1AudioPhase}
+                onTriggerCase1Audio={handlePlayAudio}
               />
             </div>
           </ZoomPanViewer>
@@ -326,6 +418,33 @@ export const WindingFaultSchematicViewer: React.FC<WindingFaultSchematicViewerPr
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
               <span>Tierra PE</span>
             </div>
+            {isGroundFaultCase && (
+              <div className="flex flex-wrap items-center gap-2 pl-2 border-l border-slate-300 dark:border-slate-700">
+                <div className="flex items-center gap-1">
+                  <span className="w-3 h-1 bg-[#854d0e] rounded-full inline-block"></span>
+                  <span>Fase Izq. (Borne 2 ➔ R)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-3 h-1 bg-sky-500 rounded-full inline-block"></span>
+                  <span>Neutro Der. (Borne N ➔ C)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-3 h-1 bg-emerald-600 border border-yellow-400 rounded-full inline-block"></span>
+                  <span>Tierra PE</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/30 font-mono">
+                  DIFERENCIAL: {diffTripped ? '0 · OFF (DISPARADO 30mA)' : 'I · ON (REARMADO)'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleDiff}
+                  className="text-[10px] text-amber-500 hover:text-amber-400 hover:underline cursor-pointer font-bold"
+                  title="Intentar rearmar diferencial (dispara por derivación)"
+                >
+                  ⚡ [Rearmar]
+                </button>
+              </div>
+            )}
           </div>
         )}
 

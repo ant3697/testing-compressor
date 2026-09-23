@@ -360,6 +360,203 @@ export function stopCompressorHum() {
   }
 }
 
+let activeCase1Audio: {
+  stop: () => void;
+} | null = null;
+
+export function stopCase1LockedRotorSound() {
+  if (activeCase1Audio) {
+    try {
+      activeCase1Audio.stop();
+    } catch {
+      // safe
+    }
+    activeCase1Audio = null;
+  }
+}
+
+/**
+ * Synthesizes the authentic acoustic signature of Case 1:
+ * - Rotor mechanically blocked / starting system failure.
+ * - Compressor energizes drawing high LRA (Locked Rotor Amps ~28.5A).
+ * - Deep, straining 50Hz/100Hz electromagnetic growl and shell vibration for exactly 3.0 seconds.
+ * - At 3.0 seconds: Sharp bimetallic snap ("CLIC") as the Klixon reaches trip temperature (>105°C).
+ * - Instant electrical cutoff (sound drops immediately to zero, followed by faint mechanical spring recoil).
+ */
+export function playCase1LockedRotorSound(
+  onStateChange?: (phase: 'idle' | 'buzzing' | 'clicked') => void
+): () => void {
+  stopCase1LockedRotorSound();
+
+  try {
+    if (!audioCtx) {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioCtx = new AudioContextClass();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    const ctx = audioCtx;
+    const now = ctx.currentTime;
+    const buzzDuration = 3.0; // Exactly 3 seconds of locked rotor hum
+
+    onStateChange?.('buzzing');
+
+    // Master gain for the 3-second hum
+    const humMasterGain = ctx.createGain();
+    humMasterGain.gain.setValueAtTime(0.001, now);
+    // Fast attack inrush kick
+    humMasterGain.gain.linearRampToValueAtTime(0.19, now + 0.04);
+    // Gradual strain as winding temp rises under 28.5A
+    humMasterGain.gain.linearRampToValueAtTime(0.22, now + 2.9);
+    // Instant shutoff at 3.0s when bimetal contacts snap open
+    humMasterGain.gain.setValueAtTime(0.22, now + buzzDuration - 0.003);
+    humMasterGain.gain.linearRampToValueAtTime(0.0001, now + buzzDuration);
+
+    // 1. 50Hz fundamental (European mains frequency)
+    const osc50 = ctx.createOscillator();
+    osc50.type = 'sawtooth';
+    osc50.frequency.setValueAtTime(50.0, now);
+
+    // Filter to simulate steel compressor shell acoustic lowpass resonance
+    const filter50 = ctx.createBiquadFilter();
+    filter50.type = 'lowpass';
+    filter50.frequency.setValueAtTime(280, now);
+    filter50.Q.setValueAtTime(2.2, now);
+
+    // 2. 100Hz electromagnetic double-frequency magnetic pull
+    const osc100 = ctx.createOscillator();
+    osc100.type = 'triangle';
+    osc100.frequency.setValueAtTime(100.0, now);
+
+    const gain100 = ctx.createGain();
+    gain100.gain.setValueAtTime(0.48, now);
+
+    // 3. Stator lamination buzz (150Hz odd harmonics under magnetic saturation)
+    const osc150 = ctx.createOscillator();
+    osc150.type = 'sawtooth';
+    osc150.frequency.setValueAtTime(150.0, now);
+
+    const gain150 = ctx.createGain();
+    gain150.gain.setValueAtTime(0.2, now);
+
+    // 4. Subtle 50Hz mechanical vibration tremolo
+    const tremoloLfo = ctx.createOscillator();
+    tremoloLfo.type = 'sine';
+    tremoloLfo.frequency.setValueAtTime(25.0, now);
+    const tremoloGain = ctx.createGain();
+    tremoloGain.gain.setValueAtTime(0.035, now);
+
+    // Connect buzzing nodes
+    osc50.connect(filter50);
+    filter50.connect(humMasterGain);
+
+    osc100.connect(gain100);
+    gain100.connect(humMasterGain);
+
+    osc150.connect(gain150);
+    gain150.connect(humMasterGain);
+
+    tremoloLfo.connect(tremoloGain);
+    tremoloGain.connect(humMasterGain.gain);
+
+    humMasterGain.connect(ctx.destination);
+
+    // Start buzzing oscillators
+    osc50.start(now);
+    osc100.start(now);
+    osc150.start(now);
+    tremoloLfo.start(now);
+
+    osc50.stop(now + buzzDuration + 0.05);
+    osc100.stop(now + buzzDuration + 0.05);
+    osc150.stop(now + buzzDuration + 0.05);
+    tremoloLfo.stop(now + buzzDuration + 0.05);
+
+    // 5. At t = 3.0s: The Klixon bimetallic snap "CLIC"
+    const clickTime = now + buzzDuration;
+
+    // A) High crisp bimetal disc ping (2100Hz down to 340Hz in 28ms)
+    const clickPing = ctx.createOscillator();
+    const pingGain = ctx.createGain();
+    clickPing.type = 'triangle';
+    clickPing.frequency.setValueAtTime(2100, clickTime);
+    clickPing.frequency.exponentialRampToValueAtTime(340, clickTime + 0.028);
+    pingGain.gain.setValueAtTime(0.0001, clickTime);
+    pingGain.gain.setValueAtTime(0.35, clickTime + 0.001);
+    pingGain.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.045);
+    clickPing.connect(pingGain);
+    pingGain.connect(ctx.destination);
+    clickPing.start(clickTime);
+    clickPing.stop(clickTime + 0.06);
+
+    // B) Sharp contact arc break pop
+    const popOsc = ctx.createOscillator();
+    const popGain = ctx.createGain();
+    popOsc.type = 'square';
+    popOsc.frequency.setValueAtTime(3400, clickTime);
+    popOsc.frequency.exponentialRampToValueAtTime(110, clickTime + 0.016);
+    popGain.gain.setValueAtTime(0.0001, clickTime);
+    popGain.gain.setValueAtTime(0.26, clickTime + 0.001);
+    popGain.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.022);
+    popOsc.connect(popGain);
+    popGain.connect(ctx.destination);
+    popOsc.start(clickTime);
+    popOsc.stop(clickTime + 0.03);
+
+    // C) Compressor shell / internal spring release shudder
+    const shudderOsc = ctx.createOscillator();
+    const shudderGain = ctx.createGain();
+    shudderOsc.type = 'sine';
+    shudderOsc.frequency.setValueAtTime(74, clickTime + 0.004);
+    shudderOsc.frequency.exponentialRampToValueAtTime(24, clickTime + 0.16);
+    shudderGain.gain.setValueAtTime(0.0001, clickTime + 0.004);
+    shudderGain.gain.setValueAtTime(0.14, clickTime + 0.006);
+    shudderGain.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.18);
+    shudderOsc.connect(shudderGain);
+    shudderGain.connect(ctx.destination);
+    shudderOsc.start(clickTime + 0.004);
+    shudderOsc.stop(clickTime + 0.2);
+
+    // Scheduled UI state changes
+    const timeoutClick = window.setTimeout(() => {
+      onStateChange?.('clicked');
+    }, 3000);
+
+    const timeoutIdle = window.setTimeout(() => {
+      onStateChange?.('idle');
+      activeCase1Audio = null;
+    }, 4200);
+
+    const stopFn = () => {
+      clearTimeout(timeoutClick);
+      clearTimeout(timeoutIdle);
+      try {
+        humMasterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        osc50.stop();
+        osc100.stop();
+        osc150.stop();
+        tremoloLfo.stop();
+        clickPing.stop();
+        popOsc.stop();
+        shudderOsc.stop();
+      } catch {
+        // safe
+      }
+      onStateChange?.('idle');
+    };
+
+    activeCase1Audio = { stop: stopFn };
+    return stopFn;
+  } catch {
+    onStateChange?.('idle');
+    return () => {};
+  }
+}
+
 /**
  * Play acoustic electrical fault / mechanical simulation sounds for diagnostic training
  */
@@ -379,6 +576,10 @@ export function playFaultAcousticSound(
     | 'case6'
     | string
 ) {
+  if (rawType === 'case1') {
+    playCase1LockedRotorSound();
+    return;
+  }
   try {
     if (!audioCtx) {
       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

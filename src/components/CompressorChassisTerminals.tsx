@@ -17,6 +17,8 @@ export interface CompressorChassisTerminalsProps {
   onChassisClick?: () => void;
   showFaultEffects?: boolean;
   className?: string;
+  case1AudioPhase?: 'idle' | 'buzzing' | 'clicked';
+  onTriggerCase1Audio?: () => void;
 }
 
 export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProps> = ({
@@ -30,6 +32,8 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
   onChassisClick,
   showFaultEffects = true,
   className = '',
+  case1AudioPhase = 'idle',
+  onTriggerCase1Audio,
 }) => {
   const isApexDown = orientation === 'apexDown';
 
@@ -44,6 +48,7 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
         badgeC: { x: 170, y: 310, textX: 170, textY: 334 },
         badgeR: { x: 68, y: 95, textX: 96, textY: 99 },
         badgeS: { x: 272, y: 95, textX: 216, textY: 99 },
+        ground: { x: 255, y: 310, pinX: 281, pinY: 310 },
       }
     : {
         pinC: { x: 170, y: 135 },
@@ -52,6 +57,7 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
         badgeC: { x: 170, y: 75, textX: 170, textY: 99 },
         badgeR: { x: 68, y: 295, textX: 96, textY: 299 },
         badgeS: { x: 272, y: 295, textX: 216, textY: 299 },
+        ground: { x: 255, y: 38, pinX: 281, pinY: 38 },
       };
 
   const isGroundFault = showFaultEffects && (activeFault === 'ground_fault' || activeFault === 'case2');
@@ -124,9 +130,9 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
             CARCASA METÁLICA (CHASIS)
           </text>
 
-          {/* Ground Earth Terminal Badge on top right */}
+          {/* Ground Earth Terminal Badge: bottom-right when C is down, top-right when C is up */}
           <g
-            transform="translate(255, 38)"
+            transform={`translate(${coords.ground.x}, ${coords.ground.y})`}
             className="cursor-pointer"
             onClick={onChassisClick}
           >
@@ -234,14 +240,18 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
             />
             {/* Spark to Earth terminal lug */}
             <path
-              d={`M ${coords.pinC.x} ${coords.pinC.y} L 210 100 L 250 65 L 280 40`}
+              d={
+                isApexDown
+                  ? `M ${coords.pinC.x} ${coords.pinC.y} L 205 272 L 235 292 L 255 295 L ${coords.ground.pinX} ${coords.ground.pinY}`
+                  : `M ${coords.pinC.x} ${coords.pinC.y} L 210 100 L 250 65 L ${coords.ground.pinX} ${coords.ground.pinY}`
+              }
               fill="none"
               stroke="#f59e0b"
               strokeWidth="2.5"
               strokeDasharray="4 3"
               className="animate-pulse"
             />
-            <circle cx="280" cy="40" r="7" fill="#ef4444" />
+            <circle cx={coords.ground.pinX} cy={coords.ground.pinY} r="7" fill="#ef4444" className="animate-pulse" />
             
             {/* Multimeter Probes Simulation (Red on R, Black on Ground) */}
             <g transform="translate(18, 55)">
@@ -251,7 +261,7 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
             </g>
 
             {/* Differential breaker tripped alert badge */}
-            <g transform="translate(95, 340)">
+            <g transform={isApexDown ? "translate(60, 344)" : "translate(95, 340)"}>
               <rect x="0" y="0" width="150" height="20" rx="4" fill="#450a0a" stroke="#ef4444" strokeWidth="1.2" />
               <text x="75" y="14" fill="#fca5a5" fontSize="7.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
                 ⚡ SALTA DIFERENCIAL (30mA)
@@ -357,14 +367,24 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
             <circle
               cx={coords.pinC.x}
               cy={coords.pinC.y}
-              r="32"
+              r={case1AudioPhase === 'buzzing' ? 38 : 32}
               fill="none"
               stroke="#ef4444"
-              strokeWidth="2"
-              opacity="0.4"
+              strokeWidth={case1AudioPhase === 'buzzing' ? 3 : 2}
+              opacity="0.5"
             >
-              <animate attributeName="r" values="26; 36; 26" dur="2s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.5; 0.15; 0.5" dur="2s" repeatCount="indefinite" />
+              <animate
+                attributeName="r"
+                values={case1AudioPhase === 'buzzing' ? '28; 42; 28' : '26; 36; 26'}
+                dur={case1AudioPhase === 'buzzing' ? '0.6s' : '2s'}
+                repeatCount="indefinite"
+              />
+              <animate
+                attributeName="opacity"
+                values={case1AudioPhase === 'buzzing' ? '0.8; 0.2; 0.8' : '0.5; 0.15; 0.5'}
+                dur={case1AudioPhase === 'buzzing' ? '0.6s' : '2s'}
+                repeatCount="indefinite"
+              />
             </circle>
             <circle
               cx={coords.pinC.x}
@@ -372,15 +392,32 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
               r="28"
               fill="none"
               stroke="#f97316"
-              strokeWidth="1.5"
+              strokeWidth={case1AudioPhase === 'buzzing' ? 2.5 : 1.5}
               strokeDasharray="4 3"
             />
 
             {/* Inrush Current Flow Indicator on Run Line */}
             <g transform={`translate(${(coords.pinC.x + coords.pinR.x) / 2}, ${(coords.pinC.y + coords.pinR.y) / 2})`}>
-              <rect x="-35" y="-9" width="70" height="18" rx="4" fill="#020617" stroke="#ef4444" strokeWidth="1" />
-              <text x="0" y="3" fill="#f87171" fontSize="8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
-                LRA: 28.5 A
+              <rect
+                x="-38"
+                y="-10"
+                width="76"
+                height="20"
+                rx="4"
+                fill="#020617"
+                stroke={case1AudioPhase === 'buzzing' ? '#ef4444' : case1AudioPhase === 'clicked' ? '#f59e0b' : '#ef4444'}
+                strokeWidth={case1AudioPhase === 'buzzing' ? 2 : 1}
+              />
+              <text
+                x="0"
+                y="4"
+                fill={case1AudioPhase === 'buzzing' ? '#ef4444' : case1AudioPhase === 'clicked' ? '#fbbf24' : '#f87171'}
+                fontSize="8"
+                fontWeight="bold"
+                fontFamily="monospace"
+                textAnchor="middle"
+              >
+                {case1AudioPhase === 'buzzing' ? '⚡ LRA: 28.5 A' : case1AudioPhase === 'clicked' ? '0.0 A (CORTE)' : 'LRA: 28.5 A'}
               </text>
             </g>
 
@@ -389,55 +426,116 @@ export const CompressorChassisTerminals: React.FC<CompressorChassisTerminalsProp
               transform={`translate(${coords.pinC.x + (isApexDown ? 0 : 0)}, ${
                 coords.pinC.y + (isApexDown ? -38 : 38)
               })`}
-              onClick={onKlixonClick}
+              onClick={() => {
+                if (onTriggerCase1Audio) onTriggerCase1Audio();
+                else if (onKlixonClick) onKlixonClick();
+              }}
               className="cursor-pointer"
             >
               <rect
-                x="-52"
-                y="-13"
-                width="104"
-                height="26"
+                x="-56"
+                y="-14"
+                width="112"
+                height="28"
                 rx="6"
-                fill="#450a0a"
-                stroke="#ef4444"
-                strokeWidth="1.8"
-                className="animate-pulse"
+                fill={case1AudioPhase === 'clicked' ? '#451a03' : case1AudioPhase === 'buzzing' ? '#7f1d1d' : '#450a0a'}
+                stroke={case1AudioPhase === 'clicked' ? '#fbbf24' : case1AudioPhase === 'buzzing' ? '#f87171' : '#ef4444'}
+                strokeWidth={case1AudioPhase === 'clicked' ? 2.5 : case1AudioPhase === 'buzzing' ? 2.2 : 1.8}
+                className={case1AudioPhase === 'buzzing' ? 'animate-pulse' : ''}
               />
               <text
                 x="0"
-                y="0"
-                fill="#fca5a5"
-                fontSize="8.5"
+                y="-0.5"
+                fill={case1AudioPhase === 'clicked' ? '#fde047' : case1AudioPhase === 'buzzing' ? '#fef08a' : '#fca5a5'}
+                fontSize={case1AudioPhase === 'clicked' ? '9' : '8.5'}
                 fontWeight="900"
                 textAnchor="middle"
                 fontFamily="monospace"
               >
-                "CLIC" KLIXON T &gt; 105°C
+                {case1AudioPhase === 'clicked'
+                  ? '💥 ¡CLIC! T > 105°C'
+                  : case1AudioPhase === 'buzzing'
+                  ? '🔥 CALENTANDO (3s)...'
+                  : '"CLIC" KLIXON T > 105°C'}
               </text>
               <text
                 x="0"
-                y="9"
-                fill="#f87171"
+                y="9.5"
+                fill={case1AudioPhase === 'clicked' ? '#fed7aa' : case1AudioPhase === 'buzzing' ? '#fca5a5' : '#f87171'}
                 fontSize="7"
                 textAnchor="middle"
                 fontFamily="monospace"
               >
-                (DISPARO EN 3s / LRA)
+                {case1AudioPhase === 'clicked'
+                  ? '(DISPARO TÉRMICO OK)'
+                  : case1AudioPhase === 'buzzing'
+                  ? '(LRA 28.5A SOBRECARGA)'
+                  : '(DISPARO EN 3s / LRA)'}
               </text>
             </g>
 
             {/* Amperometric clamp reading box */}
-            <g transform="translate(18, 55)">
-              <rect x="0" y="0" width="150" height="34" rx="5" fill="#020617" stroke="#ef4444" strokeWidth="1.5" />
-              <text x="8" y="14" fill="#94a3b8" fontSize="7.5" fontFamily="monospace">PINZA AMPERIMÉTRICA</text>
-              <text x="8" y="27" fill="#f87171" fontSize="11" fontWeight="bold" fontFamily="monospace">28.5 A ➔ 0.0 A ("CLIC")</text>
+            <g
+              transform="translate(18, 55)"
+              onClick={() => onTriggerCase1Audio?.()}
+              className={onTriggerCase1Audio ? 'cursor-pointer' : ''}
+            >
+              <rect
+                x="0"
+                y="0"
+                width="155"
+                height="34"
+                rx="5"
+                fill="#020617"
+                stroke={case1AudioPhase === 'buzzing' ? '#ef4444' : case1AudioPhase === 'clicked' ? '#fbbf24' : '#ef4444'}
+                strokeWidth={case1AudioPhase === 'buzzing' ? 2 : 1.5}
+                className={case1AudioPhase === 'buzzing' ? 'animate-pulse' : ''}
+              />
+              <text x="8" y="14" fill="#94a3b8" fontSize="7.5" fontFamily="monospace">
+                PINZA AMPERIMÉTRICA
+              </text>
+              <text
+                x="8"
+                y="27"
+                fill={case1AudioPhase === 'buzzing' ? '#ef4444' : case1AudioPhase === 'clicked' ? '#fbbf24' : '#f87171'}
+                fontSize={case1AudioPhase === 'buzzing' ? '10' : '11'}
+                fontWeight="bold"
+                fontFamily="monospace"
+              >
+                {case1AudioPhase === 'buzzing'
+                  ? '28.5 A ⚡ ZUMBANDO (3s)'
+                  : case1AudioPhase === 'clicked'
+                  ? '0.0 A ("CLIC" SALTO)'
+                  : '28.5 A ➔ 0.0 A ("CLIC")'}
+              </text>
             </g>
 
             {/* Alert banner */}
-            <g transform="translate(85, 340)">
-              <rect x="0" y="0" width="170" height="20" rx="4" fill="#450a0a" stroke="#ef4444" strokeWidth="1.2" />
-              <text x="85" y="14" fill="#fca5a5" fontSize="7.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
-                ⚠️ ROTOR TRABADO / FALLO ARRANQUE
+            <g transform="translate(80, 340)">
+              <rect
+                x="0"
+                y="0"
+                width="180"
+                height="20"
+                rx="4"
+                fill={case1AudioPhase === 'clicked' ? '#451a03' : '#450a0a'}
+                stroke={case1AudioPhase === 'clicked' ? '#fbbf24' : '#ef4444'}
+                strokeWidth="1.2"
+              />
+              <text
+                x="90"
+                y="14"
+                fill={case1AudioPhase === 'clicked' ? '#fde047' : '#fca5a5'}
+                fontSize="7.5"
+                fontWeight="bold"
+                fontFamily="monospace"
+                textAnchor="middle"
+              >
+                {case1AudioPhase === 'clicked'
+                  ? '💥 KLIXON DISPARADO EN 3s (0 A)'
+                  : case1AudioPhase === 'buzzing'
+                  ? '⚡ INTENTANDO ARRANCAR... (3s)'
+                  : '⚠️ ROTOR TRABADO / FALLO ARRANQUE'}
               </text>
             </g>
           </g>

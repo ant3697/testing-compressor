@@ -15,11 +15,13 @@ import { DirectStartControlsPanel } from './components/DirectStartControlsPanel'
 import { StartingSystemSchematicViewer } from './components/StartingSystemSchematicViewer';
 import { StartingSystemsControlsPanel } from './components/StartingSystemsControlsPanel';
 import { StartingSystemModal } from './components/StartingSystemModal';
+import { ComponentsInfoModal, ComponentCategoryTab } from './components/ComponentsInfoModal';
 import { WindingFaultSchematicViewer, WindingFaultType } from './components/WindingFaultSchematicViewer';
 import { SchematicVariant } from './components/IntuitiveSchematicDiagram';
 import { useMechanicalCompressionSimulator } from './hooks/useMechanicalCompressionSimulator';
 import { MechanicalCompressionBenchViewer } from './components/MechanicalCompressionBenchViewer';
 import { MechanicalCompressionControlsPanel } from './components/MechanicalCompressionControlsPanel';
+import { startCompressorHum, stopCompressorHum } from './utils/audio';
 import {
   Activity,
   Zap,
@@ -118,11 +120,36 @@ export default function App() {
   const [startingSimState, setStartingSimState] = useState<'idle' | 'starting' | 'running' | 'overload'>('idle');
   const [isStartingModalOpen, setIsStartingModalOpen] = useState<boolean>(false);
   const [modalVariant, setModalVariant] = useState<SchematicVariant>('HST_CSR_RELE');
+  const [isComponentsModalOpen, setIsComponentsModalOpen] = useState<boolean>(false);
+  const [componentsModalTab, setComponentsModalTab] = useState<ComponentCategoryTab>('all');
 
   // Winding Faults & Mechanical Diagnostics state
   const [selectedFault, setSelectedFault] = useState<WindingFaultType>('ground_fault');
   const [averiasSubTab, setAveriasSubTab] = useState<'electricas' | 'mecanico'>('mecanico');
   const mechanicalSimulator = useMechanicalCompressionSimulator();
+
+  // Active tab audio synchronization: stops running audio on tab change, resuming if destination tab is active
+  useEffect(() => {
+    stopCompressorHum();
+    if (activeTab === 'directo' && directStartSimulator.isMotorRunning && directStartSimulator.soundEnabled) {
+      startCompressorHum(0.055, false);
+    } else if (activeTab === 'arranques' && startingSimState === 'running') {
+      startCompressorHum(0.055, false);
+    } else if (
+      activeTab === 'averias' &&
+      averiasSubTab === 'mecanico' &&
+      mechanicalSimulator.isCompressing
+    ) {
+      startCompressorHum(0.055, false);
+    }
+  }, [
+    activeTab,
+    averiasSubTab,
+    directStartSimulator.isMotorRunning,
+    directStartSimulator.soundEnabled,
+    startingSimState,
+    mechanicalSimulator.isCompressing,
+  ]);
 
   // Helper to parse technician inputs (supports comma, decimal, empty, OL, infinity)
   function parseTechnicianInput(valStr: string): { val: number | null; isInfinity: boolean } {
@@ -442,6 +469,10 @@ export default function App() {
                   onOpenModal={() => {
                     setModalVariant(selectedStartingCircuit);
                     setIsStartingModalOpen(true);
+                  }}
+                  onOpenComponentsModal={() => {
+                    setComponentsModalTab('ptc');
+                    setIsComponentsModalOpen(true);
                   }}
                 />
               )}
@@ -858,6 +889,10 @@ export default function App() {
                       setModalVariant(circuit);
                       setIsStartingModalOpen(true);
                     }}
+                    onOpenComponentsModal={(tab) => {
+                      setComponentsModalTab(tab || 'all');
+                      setIsComponentsModalOpen(true);
+                    }}
                   />
                 </div>
               )}
@@ -1013,6 +1048,13 @@ export default function App() {
         isOpen={isStartingModalOpen}
         onClose={() => setIsStartingModalOpen(false)}
         initialVariant={modalVariant}
+      />
+
+      {/* Starting System Components & PTC Technical Info Modal */}
+      <ComponentsInfoModal
+        isOpen={isComponentsModalOpen}
+        onClose={() => setIsComponentsModalOpen(false)}
+        initialTab={componentsModalTab}
       />
     </div>
   );

@@ -8,6 +8,8 @@ import {
   Flame,
   AlertTriangle,
   ShieldAlert,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { UseDirectStartSimulatorReturn } from '../hooks/useDirectStartSimulator';
 
@@ -52,6 +54,24 @@ export const DirectStartBenchViewer: React.FC<DirectStartBenchViewerProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {isMotorRunning && !klixonTripped && powerOn && (
+            <span className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+              <span>🔊 Compresor arrancado</span>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => simulator.setSoundEnabled(!simulator.soundEnabled)}
+            className={`p-1 rounded text-tiny border transition-colors cursor-pointer ${
+              simulator.soundEnabled
+                ? 'bg-amber-400/20 text-amber-600 dark:text-amber-400 border-amber-400/40'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700'
+            }`}
+            title={simulator.soundEnabled ? 'Silenciar audio del compresor' : 'Activar audio del compresor'}
+          >
+            {simulator.soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+          </button>
           <button
             type="button"
             onClick={() => setIsKlixonModalOpen(true)}

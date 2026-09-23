@@ -147,11 +147,12 @@ export const MechanicalCompressionControlsPanel: React.FC<MechanicalCompressionC
           </span>
         </div>
 
-        {/* Input: Presión máxima alcanzada */}
+        {/* Parámetro A: Presión máxima alcanzada */}
         <div className="space-y-1">
           <div className="flex items-center justify-between text-tiny">
-            <label className="text-slate-600 dark:text-slate-400 font-semibold">
-              1. Presión máxima alcanzada:
+            <label className="text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] font-bold flex items-center justify-center text-slate-700 dark:text-slate-300">A</span>
+              Presión máxima alcanzada:
             </label>
             <div className="flex items-center gap-1">
               <span className="font-mono text-tiny font-bold text-sky-400">{maxBar} bar</span>
@@ -180,10 +181,11 @@ export const MechanicalCompressionControlsPanel: React.FC<MechanicalCompressionC
           />
         </div>
 
-        {/* Input: Comportamiento de estanqueidad al corte (0V) */}
+        {/* Parámetro B: Comportamiento de estanqueidad al corte (0V) */}
         <div className="space-y-1 pt-1">
-          <label className="text-tiny text-slate-600 dark:text-slate-400 font-semibold block">
-            2. Comportamiento y Retención de Válvulas al Corte (0V):
+          <label className="text-tiny text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] font-bold flex items-center justify-center text-slate-700 dark:text-slate-300">B</span>
+            Comportamiento y Retención de Válvulas al Corte (0V):
           </label>
           <div className="grid grid-cols-3 gap-1 text-[10px] font-mono">
             <button
@@ -223,45 +225,134 @@ export const MechanicalCompressionControlsPanel: React.FC<MechanicalCompressionC
         </div>
       </div>
 
-      {/* 4. Interactive Simulation Control Buttons */}
-      <div className="space-y-1.5 shrink-0">
-        <div className="grid grid-cols-2 gap-1.5">
+      {/* 4. Interactive Simulation Control Console (Consola de Botones de Prueba) */}
+      <div className="p-3 rounded-xl bg-gradient-to-b from-slate-900 to-[#070b14] border-2 border-amber-500/50 shadow-md space-y-2.5 shrink-0 text-white">
+        {/* Cabecera de la Consola de Acciones */}
+        <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                isCompressing ? 'bg-emerald-400' : isMeasuringRetention ? 'bg-amber-400' : 'bg-slate-500'
+              }`} />
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                isCompressing ? 'bg-emerald-500' : isMeasuringRetention ? 'bg-amber-500' : 'bg-slate-500'
+              }`} />
+            </span>
+            <span className="text-[11px] font-bold text-amber-400 font-mono tracking-wide">
+              PASOS DE LA PRUEBA (TALLER):
+            </span>
+          </div>
+
+          <span
+            className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+              isCompressing
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 animate-pulse'
+                : isMeasuringRetention
+                ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+                : currentPsi > 0
+                ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            {isCompressing
+              ? `⚡ ${currentPsi} PSI`
+              : isMeasuringRetention
+              ? `⏱ RETENCIÓN (${retentionElapsedSec.toFixed(1)}s)`
+              : currentPsi > 0
+              ? `${currentPsi} PSI`
+              : 'EN ESPERA (0 PSI)'}
+          </span>
+        </div>
+
+        {/* Guía interactiva contextual para el técnico */}
+        <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono flex items-start gap-2">
+          <span className="text-amber-400 font-bold shrink-0 mt-0.5">👉</span>
+          <div className="leading-tight text-slate-300">
+            {!isCompressing && !isMeasuringRetention && currentPsi === 0 && (
+              <span>
+                <strong>Paso 1:</strong> Pulsa el botón verde <strong className="text-emerald-400">PASO 1: ARRANCAR</strong> para energizar el compresor y subir la presión.
+              </span>
+            )}
+            {isCompressing && (
+              <span className="text-emerald-300">
+                Compresor subiendo a <strong>{parsedMaxPsi} PSI</strong>... Pulsa el botón parpadeante <strong className="text-amber-400">PASO 2: CORTE (0V)</strong> para comprobar si las válvulas retienen.
+              </span>
+            )}
+            {isMeasuringRetention && (
+              <span className="text-amber-300">
+                Motor cortado a 0V. Evaluando estanqueidad de válvulas... Pulsa <strong className="text-sky-300">PASO 3: PURGAR</strong> para reiniciar la aguja a 0 PSI.
+              </span>
+            )}
+            {!isCompressing && !isMeasuringRetention && currentPsi > 0 && (
+              <span className="text-sky-300">
+                Prueba finalizada ({currentPsi} PSI retenidos). Pulsa <strong className="text-sky-200">PASO 3: PURGAR MANÓMETRO</strong> para comenzar de nuevo.
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Botonera de Pasos 1 y 2 */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* BOTÓN PASO 1 */}
           <button
             type="button"
             onClick={startCompression}
             disabled={isCompressing}
-            className={`py-2 px-2.5 rounded-lg font-mono text-tiny font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-sm ${
+            className={`p-2 rounded-lg font-mono text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all shadow-md ${
               isCompressing
-                ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 animate-pulse'
-                : 'bg-emerald-700 hover:bg-emerald-600 text-white'
+                ? 'bg-emerald-600/90 text-white ring-2 ring-emerald-400 cursor-default animate-pulse'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95 ring-1 ring-emerald-400/50 hover:shadow-emerald-500/20'
             }`}
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>{isCompressing ? 'COMPRIMIENDO...' : '1. ARRANCAR (TAPAR)'}</span>
+            <div className="flex items-center gap-1.5">
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>{isCompressing ? 'COMPRIMIENDO...' : '1. ARRANCAR'}</span>
+            </div>
+            <span className="text-[8.5px] font-medium opacity-85">
+              {isCompressing ? `${currentPsi} PSI acumulando` : 'Tapar descarga (230V)'}
+            </span>
           </button>
 
+          {/* BOTÓN PASO 2 */}
           <button
             type="button"
             onClick={stopAndMeasureRetention}
             disabled={!isCompressing && currentPsi === 0}
-            className={`py-2 px-2.5 rounded-lg font-mono text-tiny font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-sm ${
-              isMeasuringRetention
-                ? 'bg-amber-500 text-black ring-2 ring-amber-400 font-black'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+            className={`p-2 rounded-lg font-mono text-[11px] font-bold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all shadow-md ${
+              isCompressing
+                ? 'bg-amber-400 hover:bg-amber-300 text-black ring-4 ring-amber-400/70 active:scale-95 shadow-lg shadow-amber-400/30'
+                : isMeasuringRetention
+                ? 'bg-amber-500/30 text-amber-300 ring-2 ring-amber-500/50 cursor-default'
+                : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-50'
             }`}
           >
-            <Square className="w-3.5 h-3.5 fill-current" />
-            <span>2. CORTE (0V) Y RETENCIÓN</span>
+            <div className="flex items-center gap-1.5">
+              <Square className="w-3.5 h-3.5 fill-current" />
+              <span>2. CORTE (0V)</span>
+            </div>
+            <span className="text-[8.5px] font-medium opacity-85">
+              {isCompressing ? '👉 ¡PULSAR AQUÍ!' : isMeasuringRetention ? 'Midiendo retención' : 'Comprobar válvulas'}
+            </span>
           </button>
         </div>
 
+        {/* BOTÓN PASO 3: PURGA CLARAMENTE VISIBLE Y DESTACADA */}
         <button
           type="button"
           onClick={resetSimulation}
-          className="w-full py-1 rounded bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white font-mono text-[10px] flex items-center justify-center gap-1 cursor-pointer transition-colors"
+          disabled={currentPsi === 0 && !isCompressing && !isMeasuringRetention}
+          className={`w-full py-2 px-2.5 rounded-lg font-mono text-[10px] font-bold flex items-center justify-center gap-2 cursor-pointer transition-all border ${
+            currentPsi > 0 || isCompressing || isMeasuringRetention
+              ? 'bg-sky-950 hover:bg-sky-900 text-sky-200 border-sky-500/50 hover:border-sky-400 shadow-sm active:scale-95'
+              : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed opacity-60'
+          }`}
         >
-          <RotateCcw className="w-3 h-3" />
-          <span>Purgar manómetro y restablecer aguja a 0 PSI</span>
+          <RotateCcw className="w-3.5 h-3.5 text-sky-400" />
+          <span>
+            {currentPsi > 0
+              ? `3. PURGAR MANÓMETRO (Liberar ${currentPsi} PSI ➔ 0 PSI)`
+              : '3. MANÓMETRO PURGADO A 0 PSI'}
+          </span>
         </button>
       </div>
 

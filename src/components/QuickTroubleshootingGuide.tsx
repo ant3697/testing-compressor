@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Wrench, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wrench, CheckCircle2, ChevronDown, ChevronUp, Volume2 } from 'lucide-react';
+import { playCase1LockedRotorSound, stopCase1LockedRotorSound } from '../utils/audio';
 
 interface FaqItem {
   question: string;
@@ -64,12 +65,31 @@ export const QuickTroubleshootingGuide: React.FC<QuickTroubleshootingGuideProps>
   onSelectCase,
 }) => {
   const [internalOpenIndex, setInternalOpenIndex] = useState<number | null>(selectedCaseIndex);
+  const [case1AudioPhase, setCase1AudioPhase] = useState<'idle' | 'buzzing' | 'clicked'>('idle');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedCaseIndex !== undefined) {
       setInternalOpenIndex(selectedCaseIndex);
     }
   }, [selectedCaseIndex]);
+
+  useEffect(() => {
+    return () => {
+      stopCase1LockedRotorSound();
+    };
+  }, []);
+
+  const handleToggleCase1Audio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (case1AudioPhase !== 'idle') {
+      stopCase1LockedRotorSound();
+      setCase1AudioPhase('idle');
+    } else {
+      playCase1LockedRotorSound((phase) => {
+        setCase1AudioPhase(phase);
+      });
+    }
+  };
 
   const activeIndex = selectedCaseIndex !== undefined ? selectedCaseIndex : internalOpenIndex;
 
@@ -147,6 +167,59 @@ export const QuickTroubleshootingGuide: React.FC<QuickTroubleshootingGuideProps>
                     borderColor: 'var(--border-subtle)',
                   }}
                 >
+                  {/* Dedicated Real Audio Simulator for Case 1 (Zumbido 3s + "Clic" Klixon) */}
+                  {idx === 0 && (
+                    <div className="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
+                      <div className="flex items-start sm:items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 border border-amber-500/30">
+                          <Volume2 className={`w-4 h-4 ${case1AudioPhase === 'buzzing' ? 'animate-bounce text-red-400' : ''}`} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-tiny font-mono font-bold uppercase text-amber-600 dark:text-amber-400">
+                              Simulación Sonora Real:
+                            </span>
+                            {case1AudioPhase === 'buzzing' && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500 text-white font-bold animate-pulse">
+                                ⚡ ZUMBIDO LRA (3s)
+                              </span>
+                            )}
+                            {case1AudioPhase === 'clicked' && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-400 text-black font-bold">
+                                💥 ¡CLIC! KLIXON DISPARADO
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-tiny text-slate-600 dark:text-slate-300 mt-0.5">
+                            Zumbido forzado de 3 segundos bajo rotor bloqueado (28.5 A) seguido del chasquido metálico seco ("CLIC") del bimetal Klixon.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleCase1Audio}
+                        className={`px-3 py-1.5 rounded-md font-mono text-tiny font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-sm ${
+                          case1AudioPhase === 'buzzing'
+                            ? 'bg-red-500 text-white animate-pulse ring-2 ring-red-400'
+                            : case1AudioPhase === 'clicked'
+                            ? 'bg-amber-400 text-black'
+                            : 'bg-amber-500 hover:bg-amber-400 text-black'
+                        }`}
+                        title="Reproducir simulación acústica de zumbido y salto de Klixon"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                        <span>
+                          {case1AudioPhase === 'buzzing'
+                            ? 'Zumbando (3s)...'
+                            : case1AudioPhase === 'clicked'
+                            ? '¡Clic Klixon!'
+                            : '🔊 Simular Sonido'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div
                       className="p-2.5 rounded-md border"

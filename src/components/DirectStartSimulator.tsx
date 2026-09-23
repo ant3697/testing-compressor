@@ -3,6 +3,7 @@ import directStartImg from '../assets/arranque directo.png';
 import { RealisticPushbutton } from './RealisticPushbutton';
 import { ZoomPanViewer } from './ZoomPanViewer';
 import { KlixonModal } from './KlixonModal';
+import { startCompressorHum, stopCompressorHum } from '../utils/audio';
 import {
   Zap,
   Play,
@@ -82,6 +83,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
         if (gainNodeRef.current && ctx) {
           gainNodeRef.current.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
         }
+        stopCompressorHum();
         return;
       }
 
@@ -168,6 +170,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
       if (!osc1 || !gain) return;
 
       if (type === 'lra') {
+        stopCompressorHum();
         // Deeper loaded magnetizing hum during rotor standstill or initial boost
         osc1.frequency.setTargetAtTime(49.0, ctx.currentTime, 0.06);
         if (osc2) osc2.frequency.setTargetAtTime(98.0, ctx.currentTime, 0.06);
@@ -175,13 +178,11 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
         if (filter2) filter2.frequency.setTargetAtTime(128, ctx.currentTime, 0.06);
         gain.gain.setTargetAtTime(0.075, ctx.currentTime, 0.06);
       } else if (type === 'running') {
-        // Atenuado: Ronroneo suave, sordo y amortiguado de compresor hermético en régimen nominal (2.850 RPM)
-        osc1.frequency.setTargetAtTime(47.5, ctx.currentTime, 0.18);
-        if (osc2) osc2.frequency.setTargetAtTime(95.0, ctx.currentTime, 0.18);
-        if (filter1) filter1.frequency.setTargetAtTime(116, ctx.currentTime, 0.18);
-        if (filter2) filter2.frequency.setTargetAtTime(136, ctx.currentTime, 0.18);
-        // Nivel atenuado y confortable: 0.034 (amortiguado por carcasa y baño de aceite)
-        gain.gain.setTargetAtTime(0.034, ctx.currentTime, 0.20);
+        if (gainNodeRef.current && ctx) {
+          gainNodeRef.current.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+        }
+        startCompressorHum(0.055, true);
+        return;
       }
     } catch {
       // Audio context might be restricted before user interaction
@@ -191,6 +192,7 @@ export const DirectStartSimulator: React.FC<DirectStartSimulatorProps> = ({
   // Stop audio on unmount
   useEffect(() => {
     return () => {
+      stopCompressorHum();
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
         audioCtxRef.current.close().catch(() => {});
       }

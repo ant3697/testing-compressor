@@ -13,7 +13,10 @@ import {
   XCircle,
   Activity,
   Volume2,
-  VolumeX
+  VolumeX,
+  Play,
+  Square,
+  RotateCcw
 } from 'lucide-react';
 import { startCompressorHum, stopCompressorHum } from '../utils/audio';
 
@@ -38,6 +41,9 @@ export const MechanicalCompressionBenchViewer: React.FC<MechanicalCompressionBen
     setMethodType,
     verdict,
     activeCaseInfo,
+    startCompression,
+    stopAndMeasureRetention,
+    resetSimulation,
   } = simulator;
 
   // Sync sound with compression state and user mute toggle
@@ -578,18 +584,70 @@ export const MechanicalCompressionBenchViewer: React.FC<MechanicalCompressionBen
               </ZoomPanViewer>
             </div>
 
-            {/* Test Status Banner inside illustration */}
-            <div className="w-full flex items-center justify-between text-[10.5px] font-mono px-3 py-1.5 bg-slate-950/95 border-t border-slate-800 shrink-0 z-10">
-              <span className="text-slate-400">Estado de Motor:</span>
-              <span className={`font-bold px-1.5 py-0.5 rounded ${
-                isCompressing
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse'
-                  : isMeasuringRetention
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                  : 'bg-slate-800 text-slate-400'
-              }`}>
-                {isCompressing ? 'ENERGIZADO 230V • COMPRIMIENDO' : isMeasuringRetention ? 'CORTE A 0V • MIDIENDO RETENCIÓN' : 'PARADO (0V)'}
-              </span>
+            {/* Test Status & Direct Workbench Action Toolbar */}
+            <div className="w-full flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono px-3 py-2 bg-slate-950/95 border-t border-slate-800 shrink-0 z-10">
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400 hidden sm:inline">Motor:</span>
+                <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                  isCompressing
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse'
+                    : isMeasuringRetention
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                    : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {isCompressing ? '⚡ 230V COMPRIMIENDO' : isMeasuringRetention ? '⏱ 0V RETENCIÓN' : 'PARADO (0V)'}
+                </span>
+              </div>
+
+              {/* Botones de acción directa en el banco de prueba */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={startCompression}
+                  disabled={isCompressing}
+                  className={`px-2.5 py-1 rounded-md font-bold flex items-center gap-1 text-[10.5px] transition-all cursor-pointer ${
+                    isCompressing
+                      ? 'bg-emerald-600/80 text-white cursor-default'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:scale-95'
+                  }`}
+                  title="Paso 1: Arrancar compresor y subir presión"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>{isCompressing ? 'Comprimiendo...' : '1. Arrancar'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={stopAndMeasureRetention}
+                  disabled={!isCompressing && currentPsi === 0}
+                  className={`px-2.5 py-1 rounded-md font-bold flex items-center gap-1 text-[10.5px] transition-all cursor-pointer ${
+                    isCompressing
+                      ? 'bg-amber-400 hover:bg-amber-300 text-black ring-2 ring-amber-400 animate-pulse font-black shadow-md'
+                      : isMeasuringRetention
+                      ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                      : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                  }`}
+                  title="Paso 2: Cortar alimentación a 0V para comprobar si las válvulas retienen"
+                >
+                  <Square className="w-3 h-3 fill-current" />
+                  <span>{isCompressing ? '👉 2. Corte (0V)' : '2. Corte'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetSimulation}
+                  disabled={currentPsi === 0 && !isCompressing && !isMeasuringRetention}
+                  className={`px-2 py-1 rounded-md font-bold flex items-center gap-1 text-[10.5px] transition-all cursor-pointer border ${
+                    currentPsi > 0 || isCompressing || isMeasuringRetention
+                      ? 'bg-sky-950 hover:bg-sky-900 text-sky-300 border-sky-500/40 hover:border-sky-300 active:scale-95'
+                      : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                  }`}
+                  title="Paso 3: Purgar manómetro y volver a 0 PSI"
+                >
+                  <RotateCcw className="w-3 h-3 text-sky-400" />
+                  <span className="hidden sm:inline">Purgar</span>
+                </button>
+              </div>
             </div>
           </div>
 

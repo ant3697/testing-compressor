@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { startCompressorHum, stopCompressorHum } from '../utils/audio';
 
 export interface UseDirectStartSimulatorReturn {
   benchMode: 'photo' | 'schematic';
@@ -80,6 +81,7 @@ export function useDirectStartSimulator(
         if (gainNodeRef.current && ctx) {
           gainNodeRef.current.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
         }
+        stopCompressorHum();
         return;
       }
 
@@ -186,6 +188,7 @@ export function useDirectStartSimulator(
       if (!osc1 || !gain) return;
 
       if (type === 'lra') {
+        stopCompressorHum();
         // Deeper loaded magnetizing hum during rotor standstill or initial boost
         osc1.frequency.setTargetAtTime(49.0, ctx.currentTime, 0.06);
         if (osc2) osc2.frequency.setTargetAtTime(98.0, ctx.currentTime, 0.06);
@@ -193,22 +196,22 @@ export function useDirectStartSimulator(
         if (filter2) filter2.frequency.setTargetAtTime(128, ctx.currentTime, 0.06);
         gain.gain.setTargetAtTime(0.075, ctx.currentTime, 0.06);
       } else if (type === 'running') {
-        // Atenuado: Ronroneo suave, sordo y amortiguado de compresor hermético en régimen nominal (2.850 RPM)
-        osc1.frequency.setTargetAtTime(47.5, ctx.currentTime, 0.18);
-        if (osc2) osc2.frequency.setTargetAtTime(95.0, ctx.currentTime, 0.18);
-        if (filter1) filter1.frequency.setTargetAtTime(116, ctx.currentTime, 0.18);
-        if (filter2) filter2.frequency.setTargetAtTime(136, ctx.currentTime, 0.18);
-        // Nivel atenuado y confortable: 0.034 (amortiguado por carcasa y baño de aceite)
-        gain.gain.setTargetAtTime(0.034, ctx.currentTime, 0.20);
+        // Stop any residual basic synth audio and play realistic refrigeration compressor audio
+        if (gainNodeRef.current && ctx) {
+          gainNodeRef.current.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+        }
+        startCompressorHum(0.055, true);
+        return;
       }
     } catch {
       // Audio context may fail if user hasn't interacted yet
     }
   }, [soundEnabled]);
 
-  // Stop sounds immediately if user disables sound
+  // Stop sounds immediately if user disables sound, or resume if running
   useEffect(() => {
     if (!soundEnabled) {
+      stopCompressorHum();
       if (gainNodeRef.current && audioCtxRef.current) {
         try {
           gainNodeRef.current.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.02);
@@ -220,8 +223,12 @@ export function useDirectStartSimulator(
         clearInterval(alarmIntervalRef.current);
         alarmIntervalRef.current = null;
       }
+    } else {
+      if (isMotorRunning && powerOn && !klixonTripped && !isSeizedMotor) {
+        startCompressorHum(0.055, false);
+      }
     }
-  }, [soundEnabled]);
+  }, [soundEnabled, isMotorRunning, powerOn, klixonTripped, isSeizedMotor]);
 
   // Handle Alarm Audio Interval
   useEffect(() => {
@@ -247,6 +254,7 @@ export function useDirectStartSimulator(
   // Clean up Web Audio Context when unmounting
   useEffect(() => {
     return () => {
+      stopCompressorHum();
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
         try {
           audioCtxRef.current.close().catch(() => {});
